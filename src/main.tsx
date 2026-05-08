@@ -9,13 +9,17 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
-// Local mobile preview safety: clear older cached PWA shells so the phone loads the latest build.
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations?.().then((registrations) => {
-    registrations.forEach((registration) => registration.unregister());
+// Sprint 2B: enable PWA service worker for HTTPS deployment.
+// Service workers only work on HTTPS or localhost, so local phone testing over http://192.x will skip this.
+if ("serviceWorker" in navigator && window.isSecureContext) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => {
+        registration.update?.();
+      })
+      .catch(() => {
+        // App continues normally if service worker registration fails.
+      });
   });
-}
-
-if ("caches" in window) {
-  caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
 }

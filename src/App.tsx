@@ -148,6 +148,69 @@ function notificationsCanBeRequested() {
   return typeof window !== "undefined" && "Notification" in window && window.isSecureContext;
 }
 
+function speechRecognitionConstructor() {
+  if (typeof window === "undefined") return null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+async function microphonePermissionHint() {
+  const permissions = (navigator as Navigator & {
+    permissions?: {
+      query?: (descriptor: { name: "microphone" }) => Promise<{ state: PermissionState }>;
+    };
+  }).permissions;
+
+  if (!permissions?.query) return "";
+
+  try {
+    const result = await permissions.query({ name: "microphone" });
+
+    if (result.state === "denied") {
+      return "Microphone permission is blocked. Open browser site settings and allow microphone access for RemindIQ.";
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function voiceReadinessMessage() {
+  if (!speechRecognitionConstructor()) {
+    return "Voice input is not available in this browser. Try Chrome or Edge, or use the phone keyboard mic.";
+  }
+
+  if (!window.isSecureContext) {
+    return "Voice may need HTTPS on mobile. You can still test typing here; full voice testing is best after deployment.";
+  }
+
+  return "";
+}
+
+function voiceErrorMessage(errorName: string) {
+  if (errorName === "not-allowed" || errorName === "service-not-allowed") {
+    return "Microphone access was blocked. Please allow microphone permission in browser settings, then try again.";
+  }
+
+  if (errorName === "no-speech") {
+    return "I could not hear anything. Tap Speak again and start speaking immediately.";
+  }
+
+  if (errorName === "audio-capture") {
+    return "No microphone was detected. Please check microphone permission or use typed input.";
+  }
+
+  if (errorName === "network") {
+    return "Voice recognition could not connect. This often happens on local mobile preview; try again after HTTPS deployment.";
+  }
+
+  if (errorName === "aborted") {
+    return "Voice capture stopped. Tap Speak again when ready.";
+  }
+
+  return "Voice capture failed. Please try again, or type the reminder for now.";
+}
+
 function getTodayLabel() {
   return new Date().toLocaleDateString("en-IN", {
     weekday: "short",
@@ -1237,37 +1300,69 @@ function App() {
     setEditText("");
   }
 
-  function handleVoiceInput() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  async function handleVoiceInput() {
+    const SpeechRecognition = speechRecognitionConstructor();
 
     if (!SpeechRecognition) {
-      setVoiceMessage("Voice input is not supported in this browser. Try Chrome.");
+      setVoiceMessage("Voice input is not available in this browser. Try Chrome or Edge, or use the phone keyboard mic.");
       return;
     }
+
+    const permissionHint = await microphonePermissionHint();
+    if (permissionHint) {
+      setVoiceMessage(permissionHint);
+      return;
+    }
+
+    const readinessHint = voiceReadinessMessage();
 
     const recognition = new SpeechRecognition();
     recognition.lang = "en-IN";
     recognition.interimResults = false;
+    recognition.continuous = false;
     recognition.maxAlternatives = 1;
 
+    let receivedResult = false;
+    let receivedError = false;
+
     setIsListening(true);
-    setVoiceMessage("Listening... speak your reminder now.");
-    recognition.start();
+    setVoiceMessage(
+      readinessHint
+        ? `${readinessHint} Listening anyway — speak your reminder now.`
+        : "Listening... speak your reminder now."
+    );
+
+    try {
+      recognition.start();
+    } catch {
+      setIsListening(false);
+      setVoiceMessage("Voice could not start. Please wait a second and try again, or type the reminder.");
+      return;
+    }
 
     recognition.onresult = (event: any) => {
-      const spokenText = event.results[0][0].transcript;
+      const spokenText = event.results?.[0]?.[0]?.transcript || "";
+      receivedResult = true;
       setIsListening(false);
-      setVoiceMessage("");
-      handleSubmit(spokenText);
+      setVoiceMessage(spokenText ? `Heard: “${spokenText}”` : "Voice captured, but no clear text was detected.");
+
+      if (spokenText.trim()) {
+        handleSubmit(spokenText);
+      }
     };
 
-    recognition.onerror = () => {
-      setVoiceMessage("Voice capture failed. Please try again or type the reminder.");
+    recognition.onerror = (event: any) => {
+      receivedError = true;
+      setVoiceMessage(voiceErrorMessage(event?.error || "unknown"));
       setIsListening(false);
     };
 
     recognition.onend = () => {
       setIsListening(false);
+
+      if (!receivedResult && !receivedError) {
+        setVoiceMessage("Voice capture ended without text. Tap Speak again and start speaking immediately.");
+      }
     };
   }
 
@@ -1276,7 +1371,7 @@ function App() {
       <section className="conversation-shell">
         <div className="brand-row">
           <div>
-            <div className="top-pill">Sprint 2A · Mobile Preview</div>
+            <div className="top-pill">Sprint 2B · Voice Prep</div>
             <h1>RemindIQ</h1>
             <p className="tagline">Natural reminders. Smarter follow-through.</p>
           </div>
@@ -1306,6 +1401,8 @@ function App() {
         {notificationState === "requires_https" && (
           <p className="mobile-alert-note">Mobile browser alerts need HTTPS. This local Wi-Fi preview can still be used for app testing.</p>
         )}
+
+        <p className="voice-support-note">Voice works best in Chrome/Edge with microphone permission. On phones, final validation should be done after HTTPS deployment.</p>
 
         <div className="chat-panel">
           <div className="chat-thread">
