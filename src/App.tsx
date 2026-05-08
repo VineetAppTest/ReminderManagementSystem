@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import "./App.css";
 
 type ReminderStatus = "confirmed" | "needs_info" | "done" | "archived";
@@ -77,7 +78,7 @@ type ChatMessage = {
   createdAt: string;
 };
 
-type NotificationState = NotificationPermission | "unsupported";
+type NotificationState = NotificationPermission | "unsupported" | "requires_https";
 
 declare global {
   interface Window {
@@ -87,6 +88,7 @@ declare global {
 }
 
 const STORAGE_KEY = "remindiq_reminders_v1";
+const CHAT_STORAGE_KEY = "remindiq_active_chat_v2";
 const OLD_STORAGE_KEYS = [
   "rms_reminders_v7",
   "rms_reminders_v6",
@@ -100,6 +102,7 @@ const FILTERS: { value: ReminderFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "today", label: "Today" },
   { value: "upcoming", label: "Upcoming" },
+  { value: "done", label: "Done" },
   { value: "Work", label: "Work" },
   { value: "Personal", label: "Personal" },
   { value: "Health", label: "Health" },
@@ -108,7 +111,6 @@ const FILTERS: { value: ReminderFilter; label: string }[] = [
   { value: "Social", label: "Social" },
   { value: "Travel", label: "Travel" },
   { value: "Home", label: "Home" },
-  { value: "done", label: "Done" },
 ];
 
 const NUMBER_WORDS: Record<string, number> = {
@@ -127,7 +129,23 @@ const NUMBER_WORDS: Record<string, number> = {
 };
 
 function createId() {
-  return crypto.randomUUID();
+  const cryptoWithUUID = globalThis.crypto as Crypto & { randomUUID?: () => string };
+
+  if (cryptoWithUUID?.randomUUID) {
+    return cryptoWithUUID.randomUUID();
+  }
+
+  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function notificationLabel(state: NotificationState) {
+  if (state === "requires_https") return "HTTPS needed";
+  if (state === "unsupported") return "Unavailable";
+  return state;
+}
+
+function notificationsCanBeRequested() {
+  return typeof window !== "undefined" && "Notification" in window && window.isSecureContext;
 }
 
 function getTodayLabel() {
@@ -166,9 +184,6 @@ function cloneDate(date: Date) {
   return new Date(date.getTime());
 }
 
-function dateFromISO(iso: string | null) {
-  return iso ? new Date(iso) : null;
-}
 
 function dateOnlyISO(date: Date) {
   const copy = cloneDate(date);
@@ -637,12 +652,35 @@ function buildDraft(base: DraftReminder | null, text: string): DraftReminder {
   const datePhrase = date?.datePhrase || base?.datePhrase || "";
   const dateAssumed = date?.dateAssumed ?? base?.dateAssumed ?? false;
   const eventTime = timeData.eventTime || base?.eventTime || null;
+  const hasNewConcreteTime = timeData.reminderTimes.length > 0;
+  const hasNewAmbiguousTime = timeData.ambiguousHour !== null && timeData.ambiguousHour !== undefined;
 
-  let reminderTimes = timeData.reminderTimes.length > 0 ? timeData.reminderTimes : base?.reminderTimes || [];
+  let reminderTimes = hasNewConcreteTime ? timeData.reminderTimes : base?.reminderTimes || [];
   let time = reminderTimes[0] || base?.time || null;
-  let ambiguousHour = timeData.ambiguousHour ?? base?.ambiguousHour ?? null;
-  let ambiguousMinute = timeData.ambiguousMinute || base?.ambiguousMinute || 0;
-  let ambiguousApproximate = timeData.ambiguousApproximate || base?.ambiguousApproximate || false;
+  let ambiguousHour = hasNewConcreteTime ? null : timeData.ambiguousHour ?? base?.ambiguousHour ?? null;
+  let ambiguousMinute = hasNewConcreteTime ? 0 : timeData.ambiguousMinute || base?.ambiguousMinute || 0;
+  let ambiguousApproximate = hasNewConcreteTime ? false : timeData.ambiguousApproximate || base?.ambiguousApproximate || false;
+
+  if (!hasNewConcreteTime && hasNewAmbiguousTime && eventTime) {
+    let inferredHour = timeData.ambiguousHour as number;
+
+    if (eventTime.hour >= 12 && inferredHour >= 1 && inferredHour <= 11) {
+      inferredHour += 12;
+    }
+
+    const inferredTime = makeTimeSlot(
+      inferredHour,
+      timeData.ambiguousMinute,
+      "reminder",
+      timeData.ambiguousApproximate
+    );
+
+    reminderTimes = [inferredTime];
+    time = inferredTime;
+    ambiguousHour = null;
+    ambiguousMinute = 0;
+    ambiguousApproximate = false;
+  }
 
   const lower = text.toLowerCase().trim();
   if (base?.ambiguousHour !== null && base?.ambiguousHour !== undefined && /^(am|a\.m\.|pm|p\.m\.)$/i.test(lower)) {
@@ -709,6 +747,51 @@ function normalizeReminder(item: any): Reminder {
   }
 
   return normalized;
+}
+
+function normalizeChatMessage(item: any): ChatMessage | null {
+  if (!item || (item.role !== "user" && item.role !== "assistant") || typeof item.text !== "string") {
+    return null;
+  }
+
+  return {
+    id: item.id || createId(),
+    role: item.role,
+    text: item.text,
+    createdAt: item.createdAt || new Date().toISOString(),
+  };
+}
+
+function normalizeDraft(item: any): DraftReminder | null {
+  if (!item || typeof item !== "object") return null;
+
+  const title = typeof item.title === "string" ? item.title : "";
+  const rawText = typeof item.rawText === "string" ? item.rawText : "";
+  const dateISO = typeof item.dateISO === "string" ? item.dateISO : null;
+  const dateText = typeof item.dateText === "string" ? item.dateText : "";
+  const datePhrase = typeof item.datePhrase === "string" ? item.datePhrase : "";
+  const time = item.time && typeof item.time.hour === "number" ? item.time : null;
+  const reminderTimes = Array.isArray(item.reminderTimes) ? item.reminderTimes.filter((timeItem: any) => typeof timeItem?.hour === "number") : [];
+  const eventTime = item.eventTime && typeof item.eventTime.hour === "number" ? item.eventTime : null;
+  const missing = Array.isArray(item.missing) ? item.missing.filter((value: any) => ["reminder details", "date", "time", "ampm"].includes(value)) : [];
+
+  return {
+    title,
+    rawText,
+    dateISO,
+    dateText,
+    datePhrase,
+    time,
+    reminderTimes,
+    eventTime,
+    dueAt: typeof item.dueAt === "string" ? item.dueAt : null,
+    missing,
+    dateAssumed: Boolean(item.dateAssumed),
+    ambiguousHour: typeof item.ambiguousHour === "number" ? item.ambiguousHour : null,
+    ambiguousMinute: typeof item.ambiguousMinute === "number" ? item.ambiguousMinute : 0,
+    ambiguousApproximate: Boolean(item.ambiguousApproximate),
+    category: item.category || "General",
+  };
 }
 
 function isSaveLike(text: string) {
@@ -815,7 +898,11 @@ function App() {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if ("Notification" in window) {
+    if (!("Notification" in window)) {
+      setNotificationState("unsupported");
+    } else if (!window.isSecureContext) {
+      setNotificationState("requires_https");
+    } else {
       setNotificationState(Notification.permission);
     }
 
@@ -831,11 +918,41 @@ function App() {
         localStorage.removeItem(STORAGE_KEY);
       }
     }
+
+    const savedChat = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (savedChat) {
+      try {
+        const parsedChat = JSON.parse(savedChat);
+        const restoredMessages = Array.isArray(parsedChat.messages)
+          ? parsedChat.messages.map(normalizeChatMessage).filter(Boolean).slice(-30)
+          : [];
+        const restoredDraft = normalizeDraft(parsedChat.draft);
+        const restoredLastContext = normalizeDraft(parsedChat.lastContext);
+
+        setMessages(restoredMessages as ChatMessage[]);
+        setDraft(restoredDraft);
+        setLastContext(restoredLastContext);
+        setInput(typeof parsedChat.input === "string" ? parsedChat.input : "");
+      } catch {
+        localStorage.removeItem(CHAT_STORAGE_KEY);
+      }
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(reminders));
   }, [reminders]);
+
+  useEffect(() => {
+    const chatState = {
+      messages: messages.slice(-30),
+      draft,
+      lastContext,
+      input,
+    };
+
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatState));
+  }, [messages, draft, lastContext, input]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -859,7 +976,7 @@ function App() {
             return {
               ...item,
               notifiedAt: item.notifiedAt || new Date().toISOString(),
-              status: "archived",
+              status: "archived" as ReminderStatus,
             };
           }
 
@@ -867,7 +984,7 @@ function App() {
         }).map((item, index, array) => {
           if (index === array.length - 1) {
             dueItems.forEach((dueItem) => {
-              if ("Notification" in window && Notification.permission === "granted") {
+              if (notificationsCanBeRequested() && Notification.permission === "granted") {
                 new Notification("Reminder due", { body: dueItem.title });
               } else {
                 window.alert(`Reminder due: ${dueItem.title}`);
@@ -936,6 +1053,13 @@ function App() {
   async function requestNotifications() {
     if (!("Notification" in window)) {
       setNotificationState("unsupported");
+      addMessage("assistant", "Browser alerts are not available in this mobile browser. Reminders will still work while the app is open.");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      setNotificationState("requires_https");
+      addMessage("assistant", "Browser alerts need HTTPS on mobile. This Wi-Fi preview link uses HTTP, so alerts may show as unavailable until we deploy or use a secure URL.");
       return;
     }
 
@@ -983,6 +1107,8 @@ function App() {
     const cleanInput = (textOverride ?? input).trim();
     if (!cleanInput) return;
 
+    setInput("");
+    setVoiceMessage("");
     addMessage("user", cleanInput);
 
     if (draftReadyToSave && isSaveLike(cleanInput)) {
@@ -1025,11 +1151,17 @@ function App() {
     setVoiceMessage("");
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSubmit();
     }
+  }
+
+
+  function handleComposerSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    handleSubmit();
   }
 
   function handleSaveReminder() {
@@ -1144,7 +1276,7 @@ function App() {
       <section className="conversation-shell">
         <div className="brand-row">
           <div>
-            <div className="top-pill">RMS Sprint 1D · Categorisation</div>
+            <div className="top-pill">Sprint 2A · Mobile Preview</div>
             <h1>RemindIQ</h1>
             <p className="tagline">Natural reminders. Smarter follow-through.</p>
           </div>
@@ -1157,13 +1289,23 @@ function App() {
         <div className="utility-row">
           <div className="mini-panel">
             <span>Browser alerts</span>
-            <strong className="permission-pill">{notificationState}</strong>
+            <strong className="permission-pill">{notificationLabel(notificationState)}</strong>
           </div>
 
-          <button className="secondary-button" onClick={requestNotifications} type="button">
-            Enable Notifications
+          <button
+            className="secondary-button"
+            onClick={requestNotifications}
+            type="button"
+            aria-label="Enable browser notifications"
+            disabled={notificationState === "requires_https" || notificationState === "unsupported"}
+          >
+            {notificationState === "requires_https" ? "HTTPS needed" : "Enable Notifications"}
           </button>
         </div>
+
+        {notificationState === "requires_https" && (
+          <p className="mobile-alert-note">Mobile browser alerts need HTTPS. This local Wi-Fi preview can still be used for app testing.</p>
+        )}
 
         <div className="chat-panel">
           <div className="chat-thread">
@@ -1207,13 +1349,18 @@ function App() {
             <div ref={chatEndRef} />
           </div>
 
-          <div className="composer">
+          <form className="composer" onSubmit={handleComposerSubmit}>
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={draft ? 'Reply naturally, e.g. "Tuesday", "pm", or "Save it"' : 'Type a reminder, e.g. "Dinner at 9 pm Tuesday"'}
               rows={2}
+              enterKeyHint="send"
+              autoCapitalize="sentences"
+              autoCorrect="on"
+              spellCheck={true}
+              aria-label="Reminder message input"
             />
 
             <div className="composer-actions">
@@ -1221,13 +1368,18 @@ function App() {
                 {isListening ? "Listening..." : "Speak"}
               </button>
 
-              <button className="primary-button" onClick={() => handleSubmit()} type="button">
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => handleSubmit()}
+                aria-label="Send reminder message"
+              >
                 Send
               </button>
             </div>
 
             {voiceMessage && <p className="voice-message">{voiceMessage}</p>}
-          </div>
+          </form>
         </div>
       </section>
 

@@ -268,6 +268,11 @@ input:focus {
   background: #7f1d1d;
 }
 
+.secondary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .quiet-action-button {
   background: rgba(148, 163, 184, 0.14);
   color: #e2e8f0;
@@ -557,5 +562,317 @@ input:focus {
   .item-actions,
   .edit-actions {
     width: 100%;
+  }
+}
+
+/* Sprint 2A PWA/mobile polish */
+@supports (padding: max(0px)) {
+  .app-shell {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Sprint 2A mobile input and preview fixes */
+.mobile-alert-note {
+  margin: -4px 0 10px;
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+button,
+textarea,
+input {
+  touch-action: manipulation;
+}
+
+.composer textarea {
+  min-height: 52px;
+  max-height: 120px;
+  -webkit-user-select: text;
+  user-select: text;
+  caret-color: #0f172a;
+  font-size: 16px;
+}
+
+@media (max-width: 720px) {
+  .chat-panel {
+    grid-template-rows: minmax(260px, 46vh) auto;
+  }
+
+  .composer {
+    padding: 10px;
+  }
+
+  .composer textarea {
+    min-height: 50px;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .confirm-button,
+  .quiet-action-button,
+  .danger-action-button {
+    min-height: 46px;
+  }
+}
+
+/* Sprint 2A Fix 2: mobile compact UX + filter rows */
+@media (max-width: 720px) {
+  body {
+    min-height: 100svh;
+  }
+
+  .app-shell {
+    padding: 8px;
+    gap: 10px;
+  }
+
+  .conversation-shell,
+  .list-card {
+    border-radius: 20px;
+    padding: 10px;
+  }
+
+  .brand-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .top-pill {
+    display: none;
+  }
+
+  h1 {
+    font-size: 30px;
+    line-height: 0.95;
+    letter-spacing: -0.045em;
+  }
+
+  .tagline {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .today-card {
+    min-width: 96px;
+    padding: 8px 9px;
+    border-radius: 14px;
+    text-align: right;
+  }
+
+  .today-card span {
+    font-size: 11px;
+  }
+
+  .today-card strong {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .utility-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    margin: 8px 0;
+  }
+
+  .mini-panel {
+    padding: 8px 9px;
+    border-radius: 13px;
+    min-height: 38px;
+  }
+
+  .mini-panel span,
+  .permission-pill {
+    font-size: 11px;
+  }
+
+  .utility-row .secondary-button {
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 13px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .mobile-alert-note {
+    margin: -2px 0 8px;
+    font-size: 11px;
+  }
+
+  .chat-panel {
+    grid-template-rows: minmax(190px, 36svh) auto;
+    border-radius: 18px;
+  }
+
+  .chat-thread {
+    padding: 9px;
+    gap: 8px;
+  }
+
+  .message-bubble {
+    max-width: 94%;
+    border-radius: 18px;
+    padding: 10px 11px;
+  }
+
+  .message-name {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+
+  .message-bubble p {
+    font-size: 13px;
+    line-height: 1.42;
+  }
+
+  .action-bubble {
+    padding: 8px;
+    gap: 7px;
+    border-radius: 17px;
+  }
+
+  .composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    padding: 8px;
+  }
+
+  .composer textarea {
+    min-height: 44px;
+    max-height: 92px;
+    border-radius: 15px;
+    padding: 10px 11px;
+  }
+
+  .composer-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .confirm-button,
+  .quiet-action-button,
+  .danger-action-button {
+    min-height: 42px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    font-size: 13px;
+  }
+
+  .voice-message {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .list-header h2 {
+    font-size: 21px;
+  }
+
+  .list-header p {
+    font-size: 12px;
+  }
+
+  .list-header > span {
+    width: 36px;
+    height: 36px;
+    border-radius: 13px;
+  }
+
+  .search-box {
+    margin-top: 10px;
+    padding: 10px 11px;
+    border-radius: 14px;
+  }
+
+  .filter-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    padding: 9px 0 3px;
+  }
+
+  .filter-chip {
+    width: 100%;
+    text-align: center;
+    padding: 7px 6px;
+    font-size: 11px;
+  }
+
+  .reminder-list {
+    gap: 9px;
+    margin-top: 10px;
+  }
+
+  .reminder-item {
+    border-radius: 18px;
+    padding: 11px;
+    gap: 9px;
+  }
+
+  .reminder-item h3 {
+    margin: 8px 0 4px;
+    font-size: 15px;
+  }
+
+  .reminder-item p {
+    font-size: 12px;
+  }
+
+  .category-chip,
+  .status-pill {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .item-actions,
+  .edit-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .item-actions button,
+  .edit-actions button {
+    width: 100%;
+    padding: 9px 6px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  h1 {
+    font-size: 27px;
+  }
+
+  .today-card {
+    min-width: 88px;
+  }
+
+  .utility-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .item-actions,
+  .edit-actions {
+    grid-template-columns: 1fr;
   }
 }
