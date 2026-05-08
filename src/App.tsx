@@ -88,7 +88,7 @@ declare global {
 }
 
 const STORAGE_KEY = "remindiq_reminders_v1";
-const CHAT_STORAGE_KEY = "remindiq_active_chat_v2";
+const CHAT_STORAGE_KEY = "remindiq_active_chat_v3";
 const OLD_STORAGE_KEYS = [
   "rms_reminders_v7",
   "rms_reminders_v6",
@@ -347,6 +347,47 @@ function hasAmContext(text: string) {
   return /\b(breakfast|morning|walk|school|wakeup|wake up)\b/.test(lower);
 }
 
+function vagueTimeSlot(text: string, source: TimeSlot["source"]) {
+  const lower = text.toLowerCase();
+
+  if (/\b(noon|midday)\b/.test(lower)) return makeTimeSlot(12, 0, source, false);
+  if (/\bmidnight\b/.test(lower)) return makeTimeSlot(0, 0, source, false);
+  if (/\b(early\s+morning|morning)\b/.test(lower)) return makeTimeSlot(9, 0, source, true);
+  if (/\b(afternoon|post\s+lunch|after\s+lunch)\b/.test(lower)) return makeTimeSlot(14, 0, source, true);
+  if (/\b(evening|late\s+evening)\b/.test(lower)) return makeTimeSlot(18, 0, source, true);
+  if (/\b(night|tonight)\b/.test(lower)) return makeTimeSlot(21, 0, source, true);
+  if (/\bbefore\s+dinner\b/.test(lower)) return makeTimeSlot(19, 0, source, true);
+  if (/\bafter\s+dinner\b/.test(lower)) return makeTimeSlot(22, 0, source, true);
+
+  return null;
+}
+
+function extractBeforeOffsetMinutes(text: string) {
+  const lower = text.toLowerCase();
+
+  if (/\b(half\s+an?\s+hour|half\s+hour)\s+before\b/.test(lower)) return 30;
+  if (/\b(an?\s+hour|one\s+hour)\s+before\b/.test(lower)) return 60;
+  if (/\bquarter\s+of\s+an?\s+hour\s+before\b/.test(lower)) return 15;
+
+  const match = lower.match(/\b(\d{1,3})\s*(minutes?|mins?|m)\s+before\b/) ||
+    lower.match(/\b(\d{1,2})\s*(hours?|hrs?|h)\s+before\b/);
+
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  const unit = match[2];
+
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return /^h|hour|hr/.test(unit) ? amount * 60 : amount;
+}
+
+function subtractMinutes(slot: TimeSlot, minutes: number) {
+  const date = new Date();
+  date.setHours(slot.hour, slot.minute, 0, 0);
+  date.setMinutes(date.getMinutes() - minutes);
+  return makeTimeSlot(date.getHours(), date.getMinutes(), "reminder", slot.approximate);
+}
+
 function normalizeHour(hour: number, period: string, contextText: string) {
   const cleanPeriod = period.replace(/\./g, "").toLowerCase();
 
@@ -516,11 +557,28 @@ function extractNamedTask(text: string) {
     .trim();
 }
 
+function extractCorrectionTask(text: string) {
+  const match = text.match(/\b(?:change\s+it\s+to|actually\s+make\s+it|make\s+it)\s+(?:a\s+|an\s+|the\s+)?(.+)$/i);
+  if (!match) return "";
+
+  const candidate = cleanTaskText(match[1]);
+  if (!candidate || isTimeOnlyNumber(candidate) || extractDate(candidate) || extractTimeCandidates(candidate, candidate, "general").candidates.length > 0) {
+    return "";
+  }
+
+  return candidate;
+}
+
 function extractTimeCandidates(text: string, contextText: string, source: TimeSlot["source"]) {
   const candidates: TimeSlot[] = [];
   const ambiguous: { hour: number; minute: number; approximate: boolean }[] = [];
   const seen = new Set<string>();
   const lower = text.toLowerCase();
+  const vagueSlot = vagueTimeSlot(text, source);
+
+  if (vagueSlot) {
+    candidates.push(vagueSlot);
+  }
 
   function pushCandidate(hour: number, minute: number, period: string, approximate: boolean) {
     if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return;
@@ -569,6 +627,122 @@ function extractTimeCandidates(text: string, contextText: string, source: TimeSl
   return { candidates, ambiguous };
 }
 
+
+function extractExplicitReminderSegment(text: string) {
+  const patterns = [
+    /\b(?:but\s+)?(?:need|needs|want|wants|set|add)?\s*(?:a\s+)?reminders?\s+at\s+(.+?)(?:$|\bas\b|\bbecause\b|\bwhile\b)/i,
+    /\b(?:remind me|notify me|alert me)\s+at\s+(.+?)(?:$|\bas\b|\bbecause\b|\bwhile\b)/i,
+    /\b(?:reminder|reminders)\s+(?:at|for)\s+(.+?)(?:$|\bas\b|\bbecause\b|\bwhile\b)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      return match[1]
+        .replace(/\b(and\s+then|then)\b/gi, " and ")
+        .replace(/[.!?]+$/g, "")
+        .trim();
+    }
+  }
+
+  return "";
+}
+
+type RawTimeCandidate = {
+  hour: number;
+  minute: number;
+  period: string;
+  approximate: boolean;
+};
+
+function extractRawTimeCandidates(text: string) {
+  const lower = text.toLowerCase();
+  const rawCandidates: RawTimeCandidate[] = [];
+
+  const numericRegex = /\b(around|about|approx|approximately|near|roughly)?\s*(\d{1,2})(?:\s*-?\s*ish|ish)?(?:(?::|\.)(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?\b/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = numericRegex.exec(lower))) {
+    const hour = Number(match[2]);
+    const minute = match[3] ? Number(match[3]) : 0;
+
+    if (hour < 1 || hour > 23 || minute < 0 || minute > 59) continue;
+
+    rawCandidates.push({
+      hour,
+      minute,
+      period: match[4] || "",
+      approximate: Boolean(match[1]) || /ish/.test(match[0]),
+    });
+  }
+
+  const wordRegex = /\b(around|about|approx|approximately|near|roughly)?\s*(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s*-?\s*ish|ish)?\s*(am|pm|a\.m\.|p\.m\.)?\b/g;
+
+  while ((match = wordRegex.exec(lower))) {
+    rawCandidates.push({
+      hour: wordOrNumberToNumber(match[2]),
+      minute: 0,
+      period: match[3] || "",
+      approximate: Boolean(match[1]) || /ish/.test(match[0]),
+    });
+  }
+
+  return rawCandidates;
+}
+
+function normalizeReminderHourAgainstEvent(
+  hour: number,
+  minute: number,
+  period: string,
+  eventTime: TimeSlot | null,
+  contextText: string
+) {
+  if (period) return normalizeHour(hour, period, contextText);
+  if (hour > 12) return hour;
+
+  if (eventTime && eventTime.hour >= 12 && hour >= 1 && hour <= 11) {
+    const pmHour = hour + 12;
+    const reminderMinutes = pmHour * 60 + minute;
+    const eventMinutes = eventTime.hour * 60 + eventTime.minute;
+
+    if (reminderMinutes <= eventMinutes) return pmHour;
+  }
+
+  if (eventTime && eventTime.hour >= 12 && hour === 12) return 12;
+
+  return normalizeHour(hour, period, contextText);
+}
+
+function extractExplicitReminderTimes(
+  reminderText: string,
+  eventTime: TimeSlot | null,
+  contextText: string
+) {
+  const slots: TimeSlot[] = [];
+  const seen = new Set<string>();
+  const rawCandidates = extractRawTimeCandidates(reminderText);
+
+  rawCandidates.forEach((candidate) => {
+    const normalizedHour = normalizeReminderHourAgainstEvent(
+      candidate.hour,
+      candidate.minute,
+      candidate.period,
+      eventTime,
+      contextText
+    );
+
+    if (normalizedHour < 0 || normalizedHour > 23) return;
+
+    const key = `${normalizedHour}:${candidate.minute}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    slots.push(makeTimeSlot(normalizedHour, candidate.minute, "reminder", candidate.approximate));
+  });
+
+  return slots;
+}
+
 function extractEventAndReminderTimes(text: string, contextText: string) {
   const lower = text.toLowerCase();
   let eventTime: TimeSlot | null = null;
@@ -578,7 +752,7 @@ function extractEventAndReminderTimes(text: string, contextText: string) {
   let ambiguousApproximate = false;
 
   const eventMatch = lower.match(
-    /\b(?:as|while|because)?\s*(?:the\s+)?(?:lunch|dinner|meeting|event|appointment|date|call|match|class)\s+(?:is\s+)?at\s+([\w:.\-\s]+?)(?:$|\.|,|\band\b|\bso\b)/
+    /\b(?:as|while|because)?\s*(?:the\s+)?(?:lunch|dinner|meeting|event|appointment|date|call|match|class)\s+(?:is\s+)?at\s+([\w:.\-\s]+?)(?:$|\.|,|\band\b|\bso\b|\bbut\b|\bneed\b|\btoday\b|\btomorrow\b)/
   );
 
   if (eventMatch) {
@@ -587,6 +761,35 @@ function extractEventAndReminderTimes(text: string, contextText: string) {
   }
 
   const reminderIntent = /\b(reminder|remind|notify|alert)\b/.test(lower);
+  const beforeOffsetMinutes = extractBeforeOffsetMinutes(lower);
+
+  if (eventTime && beforeOffsetMinutes) {
+    reminderTimes = [subtractMinutes(eventTime, beforeOffsetMinutes)];
+    return {
+      eventTime,
+      reminderTimes,
+      ambiguousHour,
+      ambiguousMinute,
+      ambiguousApproximate,
+    };
+  }
+
+  const explicitReminderSegment = extractExplicitReminderSegment(text);
+
+  if (explicitReminderSegment) {
+    reminderTimes = extractExplicitReminderTimes(explicitReminderSegment, eventTime, contextText);
+
+    if (reminderTimes.length > 0) {
+      return {
+        eventTime,
+        reminderTimes,
+        ambiguousHour,
+        ambiguousMinute,
+        ambiguousApproximate,
+      };
+    }
+  }
+
   const beforeEvent = lower.split(/\b(?:as|while|because)\b/)[0];
   const reminderText = reminderIntent ? beforeEvent : text;
   const source: TimeSlot["source"] = reminderIntent ? "reminder" : "general";
@@ -623,6 +826,9 @@ function extractEventAndReminderTimes(text: string, contextText: string) {
 
 function cleanTaskText(text: string) {
   let cleaned = text
+    .replace(/\b(?:but\s+)?(?:need|needs|want|wants|set|add)?\s*(?:a\s+)?reminders?\s+at\s+.*$/gi, "")
+    .replace(/\b(?:remind me|notify me|alert me)\s+at\s+.*$/gi, "")
+    .replace(/\b(?:but\s+)?need\s+.*$/gi, "")
     .replace(/\b(reminder|remind me|notify me|alert me)\s+(for|about|to)?\b/gi, "")
     .replace(/day after tomorrow/gi, "")
     .replace(/today|tomorrow/gi, "")
@@ -636,14 +842,21 @@ function cleanTaskText(text: string) {
     .replace(/\bat\s+\d{1,2}\s*(am|pm|a\.m\.|p\.m\.)?\b/gi, "")
     .replace(/\b\d{1,2}\s*(am|pm|a\.m\.|p\.m\.)\b/gi, "")
     .replace(/\b(around|about|approx|approximately|near|roughly)\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})(\s*-?\s*ish|ish)?\b/gi, "")
+    .replace(/\b(half\s+an?\s+hour|half\s+hour)\s+before\b/gi, "")
+    .replace(/\b(an?\s+hour|one\s+hour)\s+before\b/gi, "")
+    .replace(/\bquarter\s+of\s+an?\s+hour\s+before\b/gi, "")
+    .replace(/\b(\d{1,3})\s*(minutes?|mins?|m)\s+before\b/gi, "")
+    .replace(/\b(\d{1,2})\s*(hours?|hrs?|h)\s+before\b/gi, "")
+    .replace(/\b(noon|midday|midnight|morning|afternoon|evening|night|tonight|after lunch|post lunch|before dinner|after dinner)\b/gi, "")
     .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(\s*-?\s*ish|ish)?\b/gi, "")
     .replace(/\b\d{1,2}(\s*-?\s*ish|ish)\b/gi, "")
     .replace(/\bas\s+.*$/gi, "")
     .replace(/\band then\b/gi, "")
+    .replace(/[,:;]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
-  cleaned = cleaned.replace(/^(for|about|to|at|on)\s+/i, "").trim();
+  cleaned = cleaned.replace(/^(for|about|to|at|on|but)\s+/i, "").trim();
 
   if (/^(reminder|remind|notify|alert)$/i.test(cleaned)) return "";
   return cleaned;
@@ -695,10 +908,49 @@ function deriveCategory(text: string): ReminderCategory {
 }
 
 function buildDraft(base: DraftReminder | null, text: string): DraftReminder {
-  const namedTask = extractNamedTask(text);
+  const namedTask = extractNamedTask(text) || extractCorrectionTask(text);
   const rawText = [base?.rawText, text].filter(Boolean).join(" ").trim();
   const contextText = `${base?.title || ""} ${rawText}`.trim();
   const date = extractDate(text);
+
+  if (base?.ambiguousHour !== null && base?.ambiguousHour !== undefined) {
+    const ampmWithOptionalHour = text.trim().toLowerCase().match(/^(?:(\d{1,2})(?::|\.)?(\d{2})?\s*)?(am|a\.m\.|pm|p\.m\.)$/);
+
+    if (ampmWithOptionalHour) {
+      const period = ampmWithOptionalHour[3].startsWith("p") ? "pm" : "am";
+      const hour = ampmWithOptionalHour[1] ? Number(ampmWithOptionalHour[1]) : base.ambiguousHour;
+      const minute = ampmWithOptionalHour[2] ? Number(ampmWithOptionalHour[2]) : base.ambiguousMinute;
+      const finalHour = normalizeHour(hour, period, "");
+      const resolvedTime = makeTimeSlot(finalHour, minute, "general", base.ambiguousApproximate);
+      const resolvedDateISO = date?.dateISO || base.dateISO;
+      const resolvedDateText = date?.dateText || base.dateText;
+      const resolvedDatePhrase = date?.datePhrase || base.datePhrase;
+      const resolvedTitle = base.title;
+      const resolvedMissing: MissingField[] = [];
+
+      if (!resolvedTitle) resolvedMissing.push("reminder details");
+      if (!resolvedDateISO) resolvedMissing.push("date");
+      if (!resolvedTime) resolvedMissing.push("time");
+
+      return {
+        ...base,
+        rawText,
+        title: resolvedTitle,
+        dateISO: resolvedDateISO,
+        dateText: resolvedDateText,
+        datePhrase: resolvedDatePhrase,
+        dateAssumed: date?.dateAssumed ?? base.dateAssumed,
+        time: resolvedTime,
+        reminderTimes: [resolvedTime],
+        dueAt: dueAtFor(resolvedDateISO, resolvedTime),
+        missing: resolvedMissing,
+        ambiguousHour: null,
+        ambiguousMinute: 0,
+        ambiguousApproximate: false,
+      };
+    }
+  }
+
   const timeData = extractEventAndReminderTimes(text, contextText);
 
   let title = base?.title || "";
@@ -745,16 +997,6 @@ function buildDraft(base: DraftReminder | null, text: string): DraftReminder {
     ambiguousApproximate = false;
   }
 
-  const lower = text.toLowerCase().trim();
-  if (base?.ambiguousHour !== null && base?.ambiguousHour !== undefined && /^(am|a\.m\.|pm|p\.m\.)$/i.test(lower)) {
-    const period = lower.startsWith("p") ? "pm" : "am";
-    const finalHour = normalizeHour(base.ambiguousHour, period, "");
-    time = makeTimeSlot(finalHour, base.ambiguousMinute, "general", base.ambiguousApproximate);
-    reminderTimes = [time];
-    ambiguousHour = null;
-    ambiguousMinute = 0;
-    ambiguousApproximate = false;
-  }
 
   if (time && reminderTimes.length === 0) {
     reminderTimes = [time];
@@ -868,7 +1110,7 @@ function isSaveLike(text: string) {
 
 function isChangeLike(text: string) {
   const lower = text.toLowerCase().trim();
-  return ["change", "edit", "adjust", "tweak", "modify"].some((word) => lower.includes(word));
+  return /^(change|edit|adjust|tweak|modify)(\s+it|\s+this|\s+the reminder)?\b/.test(lower);
 }
 
 function isCancelLike(text: string) {
@@ -1371,7 +1613,7 @@ function App() {
       <section className="conversation-shell">
         <div className="brand-row">
           <div>
-            <div className="top-pill">Sprint 2B · Voice Prep</div>
+            <div className="top-pill">Sprint 2C Fix 2 · Stability Lock</div>
             <h1>RemindIQ</h1>
             <p className="tagline">Natural reminders. Smarter follow-through.</p>
           </div>
@@ -1402,7 +1644,7 @@ function App() {
           <p className="mobile-alert-note">Mobile browser alerts need HTTPS. This local Wi-Fi preview can still be used for app testing.</p>
         )}
 
-        <p className="voice-support-note">Voice works best in Chrome/Edge with microphone permission. On phones, final validation should be done after HTTPS deployment.</p>
+        <p className="voice-support-note">Language engine hardened for multiple reminder times, before-event reminders, and corrections. Voice still works best after HTTPS deployment.</p>
 
         <div className="chat-panel">
           <div className="chat-thread">

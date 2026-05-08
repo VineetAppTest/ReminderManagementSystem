@@ -1,0 +1,66 @@
+[
+  {
+    "input": "Lunch with boss on 13th at 2 pm",
+    "expected": "complete reminder, Work/Social depending context"
+  },
+  {
+    "input": "Dinner at 9",
+    "expected": "ask date; infer PM from dinner"
+  },
+  {
+    "input": "Date at 9 -> Wednesday -> pm",
+    "expected": "ask AM/PM, then confirm 9 PM"
+  },
+  {
+    "input": "Team meeting at 5 pm, remind me 30 minutes before",
+    "expected": "event 5 PM, reminder 4:30 PM"
+  },
+  {
+    "input": "Team meeting at 5 pm, remind me half an hour before -> today",
+    "expected": "event 5 PM, reminder 4:30 PM; phrase not included in task title"
+  },
+  {
+    "input": "Reminder at 12 and then at 1 as lunch is at 1.10",
+    "expected": "event 1:10 PM, reminder times 12 PM and 1 PM"
+  },
+  {
+    "input": "Doctor appointment next Tuesday morning",
+    "expected": "Health, next Tuesday, around 9 AM"
+  },
+  {
+    "input": "Pay electricity bill Friday evening",
+    "expected": "Finance, Friday, around 6 PM"
+  },
+  {
+    "input": "Call Raj tomorrow",
+    "expected": "ask time"
+  },
+  {
+    "input": "Change it to Wednesday",
+    "expected": "update active draft date"
+  },
+  {
+    "input": "Make it 6 pm",
+    "expected": "update active draft time"
+  },
+  {
+    "input": "Call it client meeting",
+    "expected": "update active draft title"
+  },
+  {
+    "input": "What detail do you need?",
+    "expected": "answer based on missing slot"
+  },
+  {
+    "input": "Team meeting at 5 PM today but need reminder at 4 and then 4.30",
+    "expected": "event 5 PM, reminder times 4 PM and 4:30 PM, task title Team meeting"
+  },
+  {
+    "input": "Lunch with X tomorrow, reminder at 12 and 1 as lunch is at 1.10",
+    "expected": "event 1:10 PM, reminders 12 PM and 1 PM, save two reminders"
+  },
+  {
+    "input": "Team meeting at 5 -> PM -> Today -> Team meeting at 5 PM Today but need reminder at 4 and then 4.30",
+    "expected": "existing ready draft should update to two reminder times without accidental change/cancel"
+  }
+]

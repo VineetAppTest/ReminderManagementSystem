@@ -1,25 +1,19 @@
-RemindIQ Sprint 2B - Voice Reliability + HTTPS Deployment Prep
+RemindIQ Sprint 2C Fix 2 - Multiple Reminder Times + Stability Lock
 
-Replace/add all files in your existing project.
+Replace/add all files in your project with the files in this ZIP.
 
-Included:
-1. Better voice error messages.
-2. Microphone permission diagnostics.
-3. Voice auto-sends captured speech into the same reminder engine.
-4. Clearer handling for local mobile HTTP preview vs HTTPS deployment.
-5. PWA service worker registration for HTTPS/localhost.
-6. Current Sprint 2A reminder logic retained.
+Key fixes:
+1. Stops accidental "Change something" trigger unless user clearly asks to change/edit/adjust.
+2. Detects explicit reminder times like "need reminder at 4 and then 4.30".
+3. Handles multiple reminder alerts for one event.
+4. Keeps event time separate from reminder alert times.
+5. Removes phrases like "but need reminder at..." from task title.
+6. Retains before-event reminder support such as "half an hour before".
+7. Keeps strict save validation.
 
-Test locally:
-npm.cmd run build
-npm.cmd run preview -- --host 0.0.0.0
+Primary UAT:
+- Team meeting at 5 PM Today but need reminder at 4 and then 4.30
+Expected: Event 5:00 PM, reminders 4:00 PM and 4:30 PM, task title Team meeting.
 
-Phone local testing:
-Open the Network URL on phone. Typing should work. Browser alerts may say HTTPS needed.
-Voice may still be limited on local HTTP. Final voice testing should be done after HTTPS deployment.
-
-Recommended Git commit after successful test:
-git status
-git add .
-git commit -m "Sprint 2B voice reliability and HTTPS prep"
-git status
+- Lunch with X tomorrow, reminder at 12 and 1 as lunch is at 1.10
+Expected: Event 1:10 PM, reminders 12:00 PM and 1:00 PM.
