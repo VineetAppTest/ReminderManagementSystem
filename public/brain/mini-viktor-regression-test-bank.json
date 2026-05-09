@@ -1,0 +1,51 @@
+{
+  "version": "2E-B-Fix1",
+  "purpose": "MiniViktor regression cases that must pass before calendar integration.",
+  "hardRule": "Context-based inference is allowed. Hidden inference is not allowed.",
+  "cases": [
+    {
+      "id": "mv-reg-001",
+      "name": "visible AM/PM inference gate for earlier reminders",
+      "turns": [
+        "Meet at 7",
+        "pm",
+        "tomorro",
+        "Earlier reminder, today at 7 n tmrw at 5"
+      ],
+      "expected": "Ask for visible AM/PM inference confirmation before save options."
+    },
+    {
+      "id": "mv-reg-002",
+      "name": "candidate correction keeps two reminders",
+      "turns": [
+        "Meet at 8",
+        "pm",
+        "tomorrow",
+        "reminder for 3 n 7",
+        "No, 1st reminder today at 3 and 2nd reminder tomorrow at 7"
+      ],
+      "expected": "Event tomorrow 8 PM; reminders today 3 PM and tomorrow 7 PM; visible inference confirmation."
+    },
+    {
+      "id": "mv-reg-003",
+      "name": "multi-time same-day reminders before event",
+      "turns": [
+        "Meeting at 8",
+        "pm",
+        "today",
+        "3 n 7"
+      ],
+      "expected": "Event today 8 PM; reminders today 3 PM and 7 PM; visible inference confirmation."
+    },
+    {
+      "id": "mv-reg-004",
+      "name": "event time preserved with later reminder time",
+      "turns": [
+        "Meeting at 6 pm",
+        "tomorrow however need a reminder at 4"
+      ],
+      "expected": "Event tomorrow 6 PM; reminder tomorrow 4 PM; visible inference confirmation if AM/PM was inferred."
+    }
+  ],
+  "latestFix": "Event/Reminder Regression Repair: event date preservation, before-event offsets, lunch event + multiple alert parsing."
+}

@@ -13,6 +13,8 @@ import {
   visibleReminders,
 } from "./lib/reminderEngine";
 import type { ChatMessage, LearningMemory, Reminder, ReminderCategory, ReminderDraft } from "./lib/reminderTypes";
+import { miniViktorReportToText, runMiniViktorRegressionArena } from "./brain/miniViktorRegressionArena";
+import type { MiniViktorRegressionReport } from "./brain/miniViktorRegressionArena";
 
 type NotificationState = NotificationPermission | "unsupported" | "https-needed";
 
@@ -123,6 +125,7 @@ function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [actionButtonsArmed, setActionButtonsArmed] = useState(false);
+  const [brainReport, setBrainReport] = useState<MiniViktorRegressionReport | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -381,6 +384,23 @@ function App() {
     setMessages((prev) =>
       addMessageToList(prev, "assistant", "No problem — I won’t save it. Tell me the next reminder when ready.")
     );
+  }
+
+
+  function handleRunBrainRegression() {
+    const report = runMiniViktorRegressionArena();
+    setBrainReport(report);
+  }
+
+  function handleCopyBrainReport() {
+    if (!brainReport) return;
+    const text = miniViktorReportToText(brainReport);
+    try {
+      navigator.clipboard?.writeText(text);
+      setVoiceMessage("MiniViktor regression report copied.");
+    } catch {
+      setVoiceMessage("Could not copy automatically. Run the report and review it on screen.");
+    }
   }
 
   function handleVoiceInput() {
@@ -663,7 +683,51 @@ function App() {
         </div>
 
         <details className="test-bank">
-          <summary>Stabilisation test bank</summary>
+          <summary>MiniViktor test arena</summary>
+
+          <div className="brain-actions">
+            <button className="primary-button" onClick={handleRunBrainRegression} type="button">
+              Run regression
+            </button>
+
+            <button className="quiet-action-button" onClick={handleCopyBrainReport} disabled={!brainReport} type="button">
+              Copy report
+            </button>
+          </div>
+
+          {brainReport ? (
+            <div className={brainReport.criticalFailed > 0 ? "brain-report fail" : "brain-report pass"}>
+              <strong>MiniViktor Regression Report</strong>
+              <p>
+                Passed: {brainReport.passed}/{brainReport.total} · Failed: {brainReport.failed} · Critical failed: {brainReport.criticalFailed}
+              </p>
+
+              <div className="brain-category-grid">
+                {Object.entries(brainReport.byCategory).map(([category, value]) => (
+                  <span key={category}>
+                    {category}: {value.total - value.failed}/{value.total}
+                  </span>
+                ))}
+              </div>
+
+              {brainReport.results
+                .filter((result) => !result.passed)
+                .slice(0, 5)
+                .map((result) => (
+                  <div className="brain-failure" key={result.id}>
+                    <strong>{result.id}: {result.name}</strong>
+                    <ul>
+                      {result.failures.map((failure) => (
+                        <li key={failure}>{failure}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <p className="brain-hint">Run this before calendar integration. Any critical failure blocks the next phase.</p>
+          )}
+
           <ul>
             {getTestBank().map((test) => (
               <li key={test}>{test}</li>

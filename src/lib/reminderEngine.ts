@@ -288,7 +288,7 @@ function extractTimeTokens(text: string): TimeToken[] {
 }
 
 function hasDinnerContext(text: string) {
-  return /\b(dinner|party|night|evening)\b/i.test(text);
+  return /\b(dinner|lunch|party|night|evening)\b/i.test(text);
 }
 
 function hasMorningContext(text: string) {
@@ -470,6 +470,7 @@ function stripNoiseFromTask(input: string) {
     .replace(/\bat\s+\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/gi, "")
     .replace(/\b\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)\b/gi, "")
     .replace(/\bhalf an hour before\b|\bhalf hour before\b|\ban hour before\b|\bone hour before\b|\bquarter of an hour before\b/gi, "")
+    .replace(/[ ,]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -487,6 +488,13 @@ function extractReminderSegment(input: string): string | null {
   const match = input.match(/\b(?:remind me|reminder|need(?: a)? reminder|notify me|alert me)\b(.*)$/i);
   if (!match) return null;
   return match[1].trim();
+}
+
+function stripEventClauseFromReminderSegment(segment: string) {
+  return segment
+    .replace(/\bas .*?\bis at\s+\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function explicitEventTime(input: string, draft: ReminderDraft): TimeToken | null {
@@ -953,7 +961,7 @@ export function processUserText(
   const parsedDate = parseDate(input);
 
   const reminderSegment = extractReminderSegment(input);
-  const beforeOffset = offsetMinutes(input);
+  const beforeOffset = offsetMinutes(input) || offsetMinutes(draft.rawText);
   const messageIsAlertInstruction =
     miniViktorIntent.primaryIntent === "multiple_dated_reminder_alerts" ||
     miniViktorIntent.primaryIntent === "multiple_reminder_alerts" ||
@@ -962,17 +970,18 @@ export function processUserText(
 
   if (!directTitle) {
     const taskCandidate = cleanTextForTaskInput(input);
-    const inputIsReminderAlertInstruction =
-      miniViktorIntent.primaryIntent === "multiple_dated_reminder_alerts" ||
-      miniViktorIntent.primaryIntent === "multiple_reminder_alerts" ||
-      miniViktorIntent.primaryIntent === "before_event_reminder";
-
-    if (taskCandidate && (!currentDraft || !draft.task.trim()) && !inputIsReminderAlertInstruction) {
+    // MiniViktor must not throw away a clear task just because the same
+    // sentence also contains reminder instructions. This is required for
+    // phrases like “Team meeting at 5 pm, remind me half an hour before”.
+    if (taskCandidate && (!currentDraft || !draft.task.trim())) {
       draft.task = taskCandidate;
     }
   }
 
-  if (parsedDate && !messageIsAlertInstruction) {
+  if (parsedDate && (!messageIsAlertInstruction || (draft.eventTimeText && !draft.eventDateISO))) {
+    // If event time is already known and the user says something like
+    // “tomorrow however need a reminder at 4”, that date belongs to the
+    // event as well as the reminder unless explicitly contradicted.
     draft = applyDate(draft, parsedDate);
   }
 
@@ -996,11 +1005,12 @@ export function processUserText(
   }
 
   if (beforeOffset && draft.eventAt) {
-    draft = applyBeforeOffset(draft, input);
+    draft = applyBeforeOffset(draft, draft.rawText);
   } else {
-    const segmentForAlerts =
+    const segmentForAlertsRaw =
       reminderSegment ||
       (isPureReminderFollowUp || messageIsAlertInstruction ? input : null);
+    const segmentForAlerts = segmentForAlertsRaw ? stripEventClauseFromReminderSegment(segmentForAlertsRaw) : null;
 
     if (segmentForAlerts) {
       expectedAlertCandidateCount = countTimeBearingParts(segmentForAlerts);
