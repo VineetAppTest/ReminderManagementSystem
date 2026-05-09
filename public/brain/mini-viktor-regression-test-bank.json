@@ -1,22 +1,33 @@
 {
-  "version": "2E-B-Fix1",
-  "purpose": "MiniViktor regression cases that must pass before calendar integration.",
-  "hardRule": "Context-based inference is allowed. Hidden inference is not allowed.",
+  "version": "2E-C",
+  "purpose": "Expanded MiniViktor regression test bank from 9 to 30 cases before calendar integration.",
+  "hardRules": [
+    "Context-based inference is allowed; hidden inference is not allowed.",
+    "Multiple reminder candidates must never collapse into one.",
+    "Event time and reminder time must remain separate.",
+    "Past reminders must not become silently save-ready."
+  ],
+  "caseCount": 30,
   "cases": [
     {
       "id": "mv-reg-001",
+      "category": "visible_inference",
       "name": "visible AM/PM inference gate for earlier reminders",
+      "nowISO": "2026-05-10T12:00:00+05:30",
       "turns": [
         "Meet at 7",
         "pm",
         "tomorro",
         "Earlier reminder, today at 7 n tmrw at 5"
       ],
-      "expected": "Ask for visible AM/PM inference confirmation before save options."
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"7:00 pm\"; alertCount: 2; mustAskForInferenceConfirmation: true; mustNotBeReadyToSave: true; alerts include times: 7:00 pm, 5:00 pm",
+      "mustPassBeforeCalendar": true
     },
     {
       "id": "mv-reg-002",
+      "category": "candidate_compliance",
       "name": "candidate correction keeps two reminders",
+      "nowISO": "2026-05-10T12:00:00+05:30",
       "turns": [
         "Meet at 8",
         "pm",
@@ -24,28 +35,359 @@
         "reminder for 3 n 7",
         "No, 1st reminder today at 3 and 2nd reminder tomorrow at 7"
       ],
-      "expected": "Event tomorrow 8 PM; reminders today 3 PM and tomorrow 7 PM; visible inference confirmation."
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"8:00 pm\"; alertCount: 2; mustAskForInferenceConfirmation: true; mustNotBeReadyToSave: true; alerts include times: 3:00 pm, 7:00 pm",
+      "mustPassBeforeCalendar": true
     },
     {
       "id": "mv-reg-003",
+      "category": "candidate_compliance",
       "name": "multi-time same-day reminders before event",
+      "nowISO": "2026-05-10T12:00:00+05:30",
       "turns": [
         "Meeting at 8",
         "pm",
         "today",
         "3 n 7"
       ],
-      "expected": "Event today 8 PM; reminders today 3 PM and 7 PM; visible inference confirmation."
+      "expectedSummary": "taskIncludes: \"meeting\"; eventDatePhrase: \"today\"; eventTimeText: \"8:00 pm\"; alertCount: 2; mustAskForInferenceConfirmation: true; mustNotBeReadyToSave: true; alerts include times: 3:00 pm, 7:00 pm",
+      "mustPassBeforeCalendar": true
     },
     {
       "id": "mv-reg-004",
+      "category": "event_vs_reminder",
       "name": "event time preserved with later reminder time",
+      "nowISO": "2026-05-10T12:00:00+05:30",
       "turns": [
         "Meeting at 6 pm",
         "tomorrow however need a reminder at 4"
       ],
-      "expected": "Event tomorrow 6 PM; reminder tomorrow 4 PM; visible inference confirmation if AM/PM was inferred."
+      "expectedSummary": "taskIncludes: \"meeting\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"6:00 pm\"; alertCount: 1; mustAskForInferenceConfirmation: true; mustNotBeReadyToSave: true; alerts include times: 4:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-005",
+      "category": "before_event",
+      "name": "half an hour before event",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Team meeting at 5 pm, remind me half an hour before",
+        "today"
+      ],
+      "expectedSummary": "taskIncludes: \"team meeting\"; eventDatePhrase: \"today\"; eventTimeText: \"5:00 pm\"; alertCount: 1; alerts include times: 4:30 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-006",
+      "category": "date_typo",
+      "name": "tomorro typo becomes tomorrow",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Meet at 4",
+        "pm",
+        "tomorro"
+      ],
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"4:00 pm\"; alertCount: 1; alerts include times: 4:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-007",
+      "category": "weekday",
+      "name": "weekday follow-up fills date",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Dinner at 9 pm",
+        "Tuesday"
+      ],
+      "expectedSummary": "taskIncludes: \"dinner\"; eventTimeText: \"9:00 pm\"; alertCount: 1; alerts include times: 9:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-008",
+      "category": "event_vs_reminder",
+      "name": "lunch event and multiple reminder alerts",
+      "nowISO": "2026-05-10T10:00:00+05:30",
+      "turns": [
+        "Lunch with X tomorrow",
+        "Reminder at 12 and then at 1 as lunch is at 1.10"
+      ],
+      "expectedSummary": "taskIncludes: \"lunch with x\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"1:10 pm\"; alertCount: 2; alerts include times: 12:00 pm, 1:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-009",
+      "category": "past_guard",
+      "name": "past same-day candidate cannot become save-ready",
+      "nowISO": "2026-05-10T18:00:00+05:30",
+      "turns": [
+        "Meeting at 8",
+        "pm",
+        "today",
+        "3 n 7"
+      ],
+      "expectedSummary": "taskIncludes: \"meeting\"; eventDatePhrase: \"today\"; eventTimeText: \"8:00 pm\"; mustNotBeReadyToSave: true",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-010",
+      "category": "general",
+      "name": "single complete reminder with explicit tomorrow and time",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Call Raj tomorrow at 7 pm"
+      ],
+      "expectedSummary": "taskIncludes: \"call raj\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"7:00 pm\"; alertCount: 1; alerts include times: 7:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-011",
+      "category": "weekday",
+      "name": "dinner with weekday follow-up",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Dinner at 9 pm",
+        "Tuesday"
+      ],
+      "expectedSummary": "taskIncludes: \"dinner\"; eventTimeText: \"9:00 pm\"; alertCount: 1; alerts include times: 9:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-012",
+      "category": "general",
+      "name": "doctor appointment next Tuesday morning",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Doctor appointment next Tuesday morning"
+      ],
+      "expectedSummary": "taskIncludes: \"doctor appointment\"; eventTimeText: \"9:00 am\"; alertCount: 1; alerts include times: 9:00 am",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-013",
+      "category": "general",
+      "name": "finance evening phrase",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Pay electricity bill Friday evening"
+      ],
+      "expectedSummary": "taskIncludes: \"pay electricity bill\"; eventTimeText: \"6:00 pm\"; alertCount: 1; alerts include times: 6:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-014",
+      "category": "general",
+      "name": "missing date and time asks detail without save",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "buy medicine",
+        "what detail do you need?"
+      ],
+      "expectedSummary": "taskIncludes: \"buy medicine\"; alertCount: 0; mustNotBeReadyToSave: true",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-015",
+      "category": "date_typo",
+      "name": "tmrw typo becomes tomorrow",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Meet at 9",
+        "pm",
+        "tmrw"
+      ],
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"9:00 pm\"; alertCount: 1; alerts include times: 9:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-016",
+      "category": "date_typo",
+      "name": "tdy typo becomes today",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Meet at 9",
+        "pm",
+        "tdy"
+      ],
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"today\"; eventTimeText: \"9:00 pm\"; alertCount: 1; alerts include times: 9:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-017",
+      "category": "date_typo",
+      "name": "tommorow typo becomes tomorrow",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Meet at 9",
+        "pm",
+        "tommorow"
+      ],
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"9:00 pm\"; alertCount: 1; alerts include times: 9:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-018",
+      "category": "general",
+      "name": "title correction with call it",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Meeting tomorrow at 5 pm",
+        "call it client meeting"
+      ],
+      "expectedSummary": "taskIncludes: \"client meeting\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"5:00 pm\"; alertCount: 1; alerts include times: 5:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-019",
+      "category": "general",
+      "name": "missing time asks detail without save",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Lunch tomorrow",
+        "what detail do you need?"
+      ],
+      "expectedSummary": "taskIncludes: \"lunch\"; eventDatePhrase: \"tomorrow\"; alertCount: 0; mustNotBeReadyToSave: true",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-020",
+      "category": "multiple_dates",
+      "name": "explicit dated earlier reminders preserve event",
+      "nowISO": "2026-05-10T08:00:00+05:30",
+      "turns": [
+        "Meet at 8",
+        "pm",
+        "tomorrow",
+        "earlier reminder today at 7 pm and tomorrow at 6 pm"
+      ],
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"8:00 pm\"; alertCount: 2; alerts include times: 7:00 pm, 6:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-021",
+      "category": "event_vs_reminder",
+      "name": "explicit reminder time after event time",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Meeting at 6 pm",
+        "tomorrow however need a reminder at 4 pm"
+      ],
+      "expectedSummary": "taskIncludes: \"meeting\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"6:00 pm\"; alertCount: 1; alerts include times: 4:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-022",
+      "category": "before_event",
+      "name": "30 minutes before event",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Team meeting at 5 pm, remind me 30 minutes before",
+        "today"
+      ],
+      "expectedSummary": "taskIncludes: \"team meeting\"; eventDatePhrase: \"today\"; eventTimeText: \"5:00 pm\"; alertCount: 1; alerts include times: 4:30 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-023",
+      "category": "before_event",
+      "name": "15 minutes before event",
+      "nowISO": "2026-05-10T08:00:00+05:30",
+      "turns": [
+        "Team meeting at 5 pm, remind me 15 minutes before",
+        "today"
+      ],
+      "expectedSummary": "taskIncludes: \"team meeting\"; eventDatePhrase: \"today\"; eventTimeText: \"5:00 pm\"; alertCount: 1; alerts include times: 4:45 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-024",
+      "category": "before_event",
+      "name": "an hour before event",
+      "nowISO": "2026-05-10T08:00:00+05:30",
+      "turns": [
+        "Team meeting at 5 pm, remind me an hour before",
+        "today"
+      ],
+      "expectedSummary": "taskIncludes: \"team meeting\"; eventDatePhrase: \"today\"; eventTimeText: \"5:00 pm\"; alertCount: 1; alerts include times: 4:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-025",
+      "category": "candidate_compliance",
+      "name": "explicit multi-time same-day reminders",
+      "nowISO": "2026-05-10T08:00:00+05:30",
+      "turns": [
+        "Meeting at 8",
+        "pm",
+        "today",
+        "3 pm n 7 pm"
+      ],
+      "expectedSummary": "taskIncludes: \"meeting\"; eventDatePhrase: \"today\"; eventTimeText: \"8:00 pm\"; alertCount: 2; alerts include times: 3:00 pm, 7:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-026",
+      "category": "multiple_dates",
+      "name": "explicit date-time pairs with dash separator",
+      "nowISO": "2026-05-10T08:00:00+05:30",
+      "turns": [
+        "Meet at 8",
+        "pm",
+        "tomorrow",
+        "today - 6 pm n tomorro - 4 pm"
+      ],
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"8:00 pm\"; alertCount: 2; alerts include times: 6:00 pm, 4:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-027",
+      "category": "event_vs_reminder",
+      "name": "event-time default assumption is visible but saveable",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Meet at 8",
+        "pm",
+        "tomorrow"
+      ],
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"8:00 pm\"; alertCount: 1; alerts include times: 8:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-028",
+      "category": "visible_inference",
+      "name": "bare earlier reminders require visible inference confirmation",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Meet at 8",
+        "pm",
+        "tomorrow",
+        "earlier reminder today at 7 and tomorrow at 6"
+      ],
+      "expectedSummary": "taskIncludes: \"meet\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"8:00 pm\"; alertCount: 2; mustAskForInferenceConfirmation: true; mustNotBeReadyToSave: true; alerts include times: 7:00 pm, 6:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-029",
+      "category": "weekday",
+      "name": "ambiguous time gets weekday then AM/PM",
+      "nowISO": "2026-05-10T12:00:00+05:30",
+      "turns": [
+        "Date at 9",
+        "Wednesday",
+        "pm"
+      ],
+      "expectedSummary": "taskIncludes: \"date\"; eventTimeText: \"9:00 pm\"; alertCount: 1; alerts include times: 9:00 pm",
+      "mustPassBeforeCalendar": true
+    },
+    {
+      "id": "mv-reg-030",
+      "category": "event_vs_reminder",
+      "name": "lunch event with explicit PM reminder alerts",
+      "nowISO": "2026-05-10T10:00:00+05:30",
+      "turns": [
+        "Lunch with X tomorrow",
+        "Reminder at 12 pm and then at 1 pm as lunch is at 1.10"
+      ],
+      "expectedSummary": "taskIncludes: \"lunch with x\"; eventDatePhrase: \"tomorrow\"; eventTimeText: \"1:10 pm\"; alertCount: 2; alerts include times: 12:00 pm, 1:00 pm",
+      "mustPassBeforeCalendar": true
     }
-  ],
-  "latestFix": "Event/Reminder Regression Repair: event date preservation, before-event offsets, lunch event + multiple alert parsing."
+  ]
 }

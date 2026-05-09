@@ -1,45 +1,46 @@
-RemindIQ — Sprint 2E-B: MiniViktor Test Arena + Regression Report
+RemindIQ Sprint 2E-C — MiniViktor Regression Expansion
 
-Purpose
--------
-This sprint does not add calendar, UI beautification, or new reminder features.
-It adds a measurable MiniViktor regression arena so the brain can be checked before future sprints.
+Purpose:
+- Expand MiniViktor regression coverage from 9 cases to 30 cases.
+- Keep this sprint focused on brain quality control, not UI or calendar.
+- Use this as the stability gate before calendar conflict work.
 
-What changed
-------------
-1. Added src/brain/miniViktorRegressionArena.ts
-2. Added public/brain/mini-viktor-regression-test-bank.json
-3. Updated src/App.tsx with a MiniViktor Test Arena section.
-4. Added on-screen Run regression and Copy report actions.
-5. Added report categories, pass/fail count, critical failure count, and failure details.
+Files added/updated:
+- src/brain/miniViktorRegressionArena.ts
+- public/brain/mini-viktor-regression-test-bank.json
 
-How to use
-----------
-1. Replace/add files from this ZIP into your project.
-2. Run:
-   npm.cmd run build
-3. Run:
-   npm.cmd run preview -- --host 0.0.0.0
+Coverage areas:
+1. Visible AM/PM inference
+2. Candidate compliance
+3. Event time vs reminder time
+4. Before-event offsets
+5. Date typo handling
+6. Weekday handling
+7. Past reminder guard
+8. Missing-detail handling
+9. Explicit multi-date reminders
+10. Simple complete reminders
+
+Local validation performed while packaging:
+- MiniViktor Regression Report
+- Passed: 30/30
+- Failed: 0
+- Critical failed: 0
+
+User test steps:
+1. Replace files in your project.
+2. Run: npm.cmd run build
+3. Run: npm.cmd run preview -- --host 0.0.0.0
 4. Open RemindIQ.
-5. Scroll to Saved reminders > MiniViktor test arena.
-6. Click Run regression.
+5. Run MiniViktor regression report.
+6. Expected: Passed 30/30, Failed 0, Critical failed 0.
 
-Commit rule
------------
-Do not move to calendar integration if Critical failed is greater than 0.
-Critical failures mean MiniViktor is still violating the reminder-brain rules.
+Git steps after local pass:
+- git status
+- git add .
+- git commit -m "Sprint 2E-C expand MiniViktor regression test bank"
+- git tag v2e-c-30-case-regression-pass
+- git status
 
-Recommended commit after successful build/test
-----------------------------------------------
-git status
-git add .
-git commit -m "Sprint 2E-B MiniViktor test arena regression report"
-git status
-
-
-Sprint 2E-B Fix 1: Event/Reminder Regression Repair
-- Preserves event date when reminder time is added later.
-- Applies half-hour / before-event offsets after the event date is supplied.
-- Parses phrases such as “as lunch is at 1.10” as event time.
-- Parses “reminder at 12 and then at 1” as multiple reminder alerts.
-- Regression arena target: Passed 9/9, Critical failed 0.
+Hard rule:
+Do not move to calendar integration unless the local regression report remains 30/30.
