@@ -1,84 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, KeyboardEvent } from "react";
 import "./App.css";
+import {
+  DEFAULT_LEARNING_MEMORY,
+  createEmptyDraft,
+  createRemindersFromDraft,
+  getTestBank,
+  isCancelIntent,
+  isChangeIntent,
+  isSaveIntent,
+  processUserText,
+  updateLearningMemory,
+  visibleReminders,
+} from "./lib/reminderEngine";
+import type { ChatMessage, LearningMemory, Reminder, ReminderCategory, ReminderDraft } from "./lib/reminderTypes";
 
-type ReminderStatus = "confirmed" | "needs_info" | "done" | "archived";
-type MissingField = "reminder details" | "date" | "time" | "ampm";
-type ReminderCategory =
-  | "Work"
-  | "Personal"
-  | "Health"
-  | "Finance"
-  | "Family"
-  | "Social"
-  | "Travel"
-  | "Home"
-  | "General";
-
-type ReminderFilter =
-  | "all"
-  | "today"
-  | "upcoming"
-  | "Work"
-  | "Personal"
-  | "Health"
-  | "Finance"
-  | "Family"
-  | "Social"
-  | "Travel"
-  | "Home"
-  | "done";
-
-type TimeSlot = {
-  hour: number;
-  minute: number;
-  text: string;
-  approximate: boolean;
-  source: "reminder" | "event" | "general";
-};
-
-type Reminder = {
-  id: string;
-  title: string;
-  rawText: string;
-  dateText: string;
-  datePhrase: string;
-  timeText: string;
-  dueAt: string | null;
-  status: ReminderStatus;
-  category: ReminderCategory;
-  createdAt: string;
-  notifiedAt?: string | null;
-  approximateTime?: boolean;
-  eventTimeText?: string;
-};
-
-type DraftReminder = {
-  title: string;
-  rawText: string;
-  dateISO: string | null;
-  dateText: string;
-  datePhrase: string;
-  time: TimeSlot | null;
-  reminderTimes: TimeSlot[];
-  eventTime: TimeSlot | null;
-  dueAt: string | null;
-  missing: MissingField[];
-  dateAssumed: boolean;
-  ambiguousHour: number | null;
-  ambiguousMinute: number;
-  ambiguousApproximate: boolean;
-  category: ReminderCategory;
-};
-
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  createdAt: string;
-};
-
-type NotificationState = NotificationPermission | "unsupported" | "requires_https";
+type NotificationState = NotificationPermission | "unsupported" | "https-needed";
 
 declare global {
   interface Window {
@@ -87,128 +23,37 @@ declare global {
   }
 }
 
-const STORAGE_KEY = "remindiq_reminders_v1";
-const CHAT_STORAGE_KEY = "remindiq_active_chat_v3";
-const OLD_STORAGE_KEYS = [
-  "rms_reminders_v7",
-  "rms_reminders_v6",
-  "rms_reminders_v5",
-  "rms_reminders_v4",
-  "rms_reminders_v2",
-  "rms_reminders_v1",
+const REMINDERS_KEY = "remindiq_reminders_v2d_stable";
+const DRAFT_KEY = "remindiq_active_draft_v2d_stable";
+const MESSAGES_KEY = "remindiq_messages_v2d_stable";
+const LEARNING_KEY = "remindiq_learning_v2d_stable";
+
+const FILTERS: Array<"All" | "Today" | "Upcoming" | "Done" | ReminderCategory> = [
+  "All",
+  "Today",
+  "Upcoming",
+  "Done",
+  "Work",
+  "Personal",
+  "Health",
+  "Finance",
+  "Family",
+  "Social",
+  "Travel",
+  "Home",
+  "General",
 ];
 
-const FILTERS: { value: ReminderFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "today", label: "Today" },
-  { value: "upcoming", label: "Upcoming" },
-  { value: "done", label: "Done" },
-  { value: "Work", label: "Work" },
-  { value: "Personal", label: "Personal" },
-  { value: "Health", label: "Health" },
-  { value: "Finance", label: "Finance" },
-  { value: "Family", label: "Family" },
-  { value: "Social", label: "Social" },
-  { value: "Travel", label: "Travel" },
-  { value: "Home", label: "Home" },
-];
-
-const NUMBER_WORDS: Record<string, number> = {
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-  eleven: 11,
-  twelve: 12,
-};
-
-function createId() {
-  const cryptoWithUUID = globalThis.crypto as Crypto & { randomUUID?: () => string };
-
-  if (cryptoWithUUID?.randomUUID) {
-    return cryptoWithUUID.randomUUID();
-  }
-
-  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function notificationLabel(state: NotificationState) {
-  if (state === "requires_https") return "HTTPS needed";
-  if (state === "unsupported") return "Unavailable";
-  return state;
-}
-
-function notificationsCanBeRequested() {
-  return typeof window !== "undefined" && "Notification" in window && window.isSecureContext;
-}
-
-function speechRecognitionConstructor() {
-  if (typeof window === "undefined") return null;
-  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-}
-
-async function microphonePermissionHint() {
-  const permissions = (navigator as Navigator & {
-    permissions?: {
-      query?: (descriptor: { name: "microphone" }) => Promise<{ state: PermissionState }>;
-    };
-  }).permissions;
-
-  if (!permissions?.query) return "";
-
+function safeId() {
   try {
-    const result = await permissions.query({ name: "microphone" });
-
-    if (result.state === "denied") {
-      return "Microphone permission is blocked. Open browser site settings and allow microphone access for RemindIQ.";
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      return crypto.randomUUID();
     }
   } catch {
-    return "";
+    // fallback below
   }
 
-  return "";
-}
-
-function voiceReadinessMessage() {
-  if (!speechRecognitionConstructor()) {
-    return "Voice input is not available in this browser. Try Chrome or Edge, or use the phone keyboard mic.";
-  }
-
-  if (!window.isSecureContext) {
-    return "Voice may need HTTPS on mobile. You can still test typing here; full voice testing is best after deployment.";
-  }
-
-  return "";
-}
-
-function voiceErrorMessage(errorName: string) {
-  if (errorName === "not-allowed" || errorName === "service-not-allowed") {
-    return "Microphone access was blocked. Please allow microphone permission in browser settings, then try again.";
-  }
-
-  if (errorName === "no-speech") {
-    return "I could not hear anything. Tap Speak again and start speaking immediately.";
-  }
-
-  if (errorName === "audio-capture") {
-    return "No microphone was detected. Please check microphone permission or use typed input.";
-  }
-
-  if (errorName === "network") {
-    return "Voice recognition could not connect. This often happens on local mobile preview; try again after HTTPS deployment.";
-  }
-
-  if (errorName === "aborted") {
-    return "Voice capture stopped. Tap Speak again when ready.";
-  }
-
-  return "Voice capture failed. Please try again, or type the reminder for now.";
+  return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
 function getTodayLabel() {
@@ -216,823 +61,35 @@ function getTodayLabel() {
     weekday: "short",
     day: "numeric",
     month: "short",
-    year: "numeric",
   });
 }
 
-function sameDate(a: Date, b: Date) {
+function addMessageToList(messages: ChatMessage[], role: "user" | "assistant", text: string): ChatMessage[] {
+  return [
+    ...messages,
+    {
+      id: safeId(),
+      role,
+      text,
+      createdAt: new Date().toISOString(),
+    },
+  ];
+}
+
+function isToday(iso: string | null) {
+  if (!iso) return false;
+  const date = new Date(iso);
+  const today = new Date();
   return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
   );
-}
-
-function getOrdinal(day: number) {
-  if (day > 3 && day < 21) return `${day}th`;
-
-  switch (day % 10) {
-    case 1:
-      return `${day}st`;
-    case 2:
-      return `${day}nd`;
-    case 3:
-      return `${day}rd`;
-    default:
-      return `${day}th`;
-  }
-}
-
-function cloneDate(date: Date) {
-  return new Date(date.getTime());
-}
-
-
-function dateOnlyISO(date: Date) {
-  const copy = cloneDate(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy.toISOString();
-}
-
-function formatDateLabel(date: Date) {
-  const today = new Date();
-  const tomorrow = new Date();
-  tomorrow.setDate(today.getDate() + 1);
-
-  if (sameDate(date, today)) return "Today";
-  if (sameDate(date, tomorrow)) return "Tomorrow";
-
-  return date.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatDatePhrase(date: Date, dateAssumed: boolean) {
-  const today = new Date();
-  const tomorrow = new Date();
-  tomorrow.setDate(today.getDate() + 1);
-
-  if (sameDate(date, today)) return "today";
-  if (sameDate(date, tomorrow)) return "tomorrow";
-
-  if (dateAssumed) {
-    return `the coming ${getOrdinal(date.getDate())}`;
-  }
-
-  return date.toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
-
-function formatTimeParts(hour: number, minute: number, approximate = false) {
-  const date = new Date();
-  date.setHours(hour, minute, 0, 0);
-  const label = date.toLocaleTimeString("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return approximate ? `around ${label}` : label;
-}
-
-function makeTimeSlot(
-  hour: number,
-  minute: number,
-  source: TimeSlot["source"],
-  approximate = false
-): TimeSlot {
-  return {
-    hour,
-    minute,
-    source,
-    approximate,
-    text: formatTimeParts(hour, minute, approximate),
-  };
-}
-
-function dueAtFor(dateISO: string | null, time: TimeSlot | null) {
-  if (!dateISO || !time) return null;
-
-  const date = new Date(dateISO);
-  date.setHours(time.hour, time.minute, 0, 0);
-  return date.toISOString();
-}
-
-function pickTemplate(templates: string[], seed: number) {
-  return templates[seed % templates.length];
-}
-
-function isTimeOnlyNumber(text: string) {
-  return /^\s*(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*$/i.test(
-    text
-  );
-}
-
-function wordOrNumberToNumber(value: string) {
-  const lower = value.toLowerCase();
-  if (NUMBER_WORDS[lower]) return NUMBER_WORDS[lower];
-  return Number(value);
-}
-
-function hasPmContext(text: string) {
-  const lower = text.toLowerCase();
-  return /\b(dinner|lunch|party|date|movie|evening|night|tonight)\b/.test(lower);
-}
-
-function hasAmContext(text: string) {
-  const lower = text.toLowerCase();
-  return /\b(breakfast|morning|walk|school|wakeup|wake up)\b/.test(lower);
-}
-
-function vagueTimeSlot(text: string, source: TimeSlot["source"]) {
-  const lower = text.toLowerCase();
-
-  if (/\b(noon|midday)\b/.test(lower)) return makeTimeSlot(12, 0, source, false);
-  if (/\bmidnight\b/.test(lower)) return makeTimeSlot(0, 0, source, false);
-  if (/\b(early\s+morning|morning)\b/.test(lower)) return makeTimeSlot(9, 0, source, true);
-  if (/\b(afternoon|post\s+lunch|after\s+lunch)\b/.test(lower)) return makeTimeSlot(14, 0, source, true);
-  if (/\b(evening|late\s+evening)\b/.test(lower)) return makeTimeSlot(18, 0, source, true);
-  if (/\b(night|tonight)\b/.test(lower)) return makeTimeSlot(21, 0, source, true);
-  if (/\bbefore\s+dinner\b/.test(lower)) return makeTimeSlot(19, 0, source, true);
-  if (/\bafter\s+dinner\b/.test(lower)) return makeTimeSlot(22, 0, source, true);
-
-  return null;
-}
-
-function extractBeforeOffsetMinutes(text: string) {
-  const lower = text.toLowerCase();
-
-  if (/\b(half\s+an?\s+hour|half\s+hour)\s+before\b/.test(lower)) return 30;
-  if (/\b(an?\s+hour|one\s+hour)\s+before\b/.test(lower)) return 60;
-  if (/\bquarter\s+of\s+an?\s+hour\s+before\b/.test(lower)) return 15;
-
-  const match = lower.match(/\b(\d{1,3})\s*(minutes?|mins?|m)\s+before\b/) ||
-    lower.match(/\b(\d{1,2})\s*(hours?|hrs?|h)\s+before\b/);
-
-  if (!match) return null;
-
-  const amount = Number(match[1]);
-  const unit = match[2];
-
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-  return /^h|hour|hr/.test(unit) ? amount * 60 : amount;
-}
-
-function subtractMinutes(slot: TimeSlot, minutes: number) {
-  const date = new Date();
-  date.setHours(slot.hour, slot.minute, 0, 0);
-  date.setMinutes(date.getMinutes() - minutes);
-  return makeTimeSlot(date.getHours(), date.getMinutes(), "reminder", slot.approximate);
-}
-
-function normalizeHour(hour: number, period: string, contextText: string) {
-  const cleanPeriod = period.replace(/\./g, "").toLowerCase();
-
-  if (cleanPeriod === "pm" && hour < 12) return hour + 12;
-  if (cleanPeriod === "am" && hour === 12) return 0;
-  if (cleanPeriod === "am" || cleanPeriod === "pm") return hour;
-
-  if (hasPmContext(contextText) && hour >= 1 && hour <= 11) return hour + 12;
-  if (hasAmContext(contextText) && hour === 12) return 0;
-
-  return hour;
-}
-
-function isAmbiguousBareTime(hour: number, period: string, contextText: string) {
-  if (period) return false;
-  if (hour < 1 || hour > 12) return false;
-  return !hasPmContext(contextText) && !hasAmContext(contextText);
-}
-
-function extractDate(text: string) {
-  const lower = text.toLowerCase();
-  let dateValue: Date | null = null;
-  let dateAssumed = false;
-
-  if (lower.includes("day after tomorrow")) {
-    dateValue = new Date();
-    dateValue.setDate(dateValue.getDate() + 2);
-  } else if (lower.includes("tomorrow")) {
-    dateValue = new Date();
-    dateValue.setDate(dateValue.getDate() + 1);
-  } else if (lower.includes("today")) {
-    dateValue = new Date();
-  }
-
-  const weekdays: Record<string, number> = {
-    sunday: 0,
-    sun: 0,
-    monday: 1,
-    mon: 1,
-    tuesday: 2,
-    tue: 2,
-    wednesday: 3,
-    wed: 3,
-    thursday: 4,
-    thu: 4,
-    friday: 5,
-    fri: 5,
-    saturday: 6,
-    sat: 6,
-  };
-
-  const weekdayMatch = lower.match(
-    /\b(this\s+|next\s+)?(sun|sunday|mon|monday|tue|tuesday|wed|wednesday|thu|thursday|fri|friday|sat|saturday)\b/
-  );
-
-  if (!dateValue && weekdayMatch) {
-    const requested = weekdays[weekdayMatch[2]];
-    const today = new Date();
-    const date = new Date();
-    const currentDay = today.getDay();
-    let diff = requested - currentDay;
-
-    if (weekdayMatch[1]?.trim() === "next") {
-      if (diff <= 0) diff += 7;
-      else diff += 7;
-    } else if (diff <= 0) {
-      diff += 7;
-    }
-
-    date.setDate(today.getDate() + diff);
-    date.setHours(0, 0, 0, 0);
-    dateValue = date;
-  }
-
-  const monthMatch = lower.match(
-    /\b(\d{1,2})(st|nd|rd|th)?\s+(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/
-  );
-
-  if (!dateValue && monthMatch) {
-    const monthMap: Record<string, number> = {
-      jan: 0,
-      january: 0,
-      feb: 1,
-      february: 1,
-      mar: 2,
-      march: 2,
-      apr: 3,
-      april: 3,
-      may: 4,
-      jun: 5,
-      june: 5,
-      jul: 6,
-      july: 6,
-      aug: 7,
-      august: 7,
-      sep: 8,
-      sept: 8,
-      september: 8,
-      oct: 9,
-      october: 9,
-      nov: 10,
-      november: 10,
-      dec: 11,
-      december: 11,
-    };
-
-    const day = Number(monthMatch[1]);
-    const month = monthMap[monthMatch[3]];
-    const date = new Date();
-    date.setMonth(month, day);
-    date.setHours(0, 0, 0, 0);
-
-    if (date < new Date()) date.setFullYear(date.getFullYear() + 1);
-    dateValue = date;
-  }
-
-  const slashDateMatch = lower.match(/\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/);
-
-  if (!dateValue && slashDateMatch) {
-    const day = Number(slashDateMatch[1]);
-    const month = Number(slashDateMatch[2]) - 1;
-    const yearText = slashDateMatch[3];
-    const year = yearText
-      ? Number(yearText.length === 2 ? `20${yearText}` : yearText)
-      : new Date().getFullYear();
-    const date = new Date(year, month, day);
-    date.setHours(0, 0, 0, 0);
-
-    if (!yearText && date < new Date()) date.setFullYear(date.getFullYear() + 1);
-    dateValue = date;
-  }
-
-  const dayOnlyMatch =
-    lower.match(/\b(?:on\s+|the\s+)?(\d{1,2})(st|nd|rd|th)\b/) ||
-    lower.match(/\bon\s+(\d{1,2})\b/) ||
-    lower.match(/\bfor\s+(\d{1,2})(st|nd|rd|th)?\b/);
-
-  if (!dateValue && dayOnlyMatch) {
-    const day = Number(dayOnlyMatch[1]);
-    const date = new Date();
-    date.setDate(day);
-    date.setHours(0, 0, 0, 0);
-
-    if (date < new Date()) date.setMonth(date.getMonth() + 1);
-    dateValue = date;
-    dateAssumed = true;
-  }
-
-  if (!dateValue) return null;
-
-  dateValue.setHours(0, 0, 0, 0);
-  return {
-    dateISO: dateOnlyISO(dateValue),
-    dateText: formatDateLabel(dateValue),
-    datePhrase: formatDatePhrase(dateValue, dateAssumed),
-    dateAssumed,
-  };
-}
-
-function extractNamedTask(text: string) {
-  const match = text.match(/\b(?:save it as|call it|make it|name it)\s+(?:a\s+|an\s+|the\s+)?(.+)$/i);
-  if (!match) return "";
-
-  return match[1]
-    .replace(/[.!?]+$/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function extractCorrectionTask(text: string) {
-  const match = text.match(/\b(?:change\s+it\s+to|actually\s+make\s+it|make\s+it)\s+(?:a\s+|an\s+|the\s+)?(.+)$/i);
-  if (!match) return "";
-
-  const candidate = cleanTaskText(match[1]);
-  if (!candidate || isTimeOnlyNumber(candidate) || extractDate(candidate) || extractTimeCandidates(candidate, candidate, "general").candidates.length > 0) {
-    return "";
-  }
-
-  return candidate;
-}
-
-function extractTimeCandidates(text: string, contextText: string, source: TimeSlot["source"]) {
-  const candidates: TimeSlot[] = [];
-  const ambiguous: { hour: number; minute: number; approximate: boolean }[] = [];
-  const seen = new Set<string>();
-  const lower = text.toLowerCase();
-  const vagueSlot = vagueTimeSlot(text, source);
-
-  if (vagueSlot) {
-    candidates.push(vagueSlot);
-  }
-
-  function pushCandidate(hour: number, minute: number, period: string, approximate: boolean) {
-    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return;
-
-    if (isAmbiguousBareTime(hour, period, contextText)) {
-      ambiguous.push({ hour, minute, approximate });
-      return;
-    }
-
-    const normalizedHour = normalizeHour(hour, period, contextText);
-    const key = `${normalizedHour}:${minute}:${approximate}:${source}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    candidates.push(makeTimeSlot(normalizedHour, minute, source, approximate));
-  }
-
-  const numericRegex = /\b(around|about|approx|approximately|near|roughly)?\s*(\d{1,2})(?:\s*-?\s*ish|ish)?(?:(?::|\.)(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?\b/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = numericRegex.exec(lower))) {
-    const prefix = match[1] || "";
-    const hour = Number(match[2]);
-    const minute = match[3] ? Number(match[3]) : 0;
-    const period = match[4] || "";
-    const raw = match[0];
-    const approximate = Boolean(prefix) || /ish/.test(raw);
-
-    if (hour >= 1 && hour <= 12) {
-      pushCandidate(hour, minute, period, approximate);
-    } else if (hour >= 13 && hour <= 23) {
-      pushCandidate(hour, minute, period || "24h", approximate);
-    }
-  }
-
-  const wordRegex = /\b(around|about|approx|approximately|near|roughly)?\s*(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s*-?\s*ish|ish)?\s*(am|pm|a\.m\.|p\.m\.)?\b/g;
-
-  while ((match = wordRegex.exec(lower))) {
-    const prefix = match[1] || "";
-    const hour = wordOrNumberToNumber(match[2]);
-    const period = match[3] || "";
-    const raw = match[0];
-    const approximate = Boolean(prefix) || /ish/.test(raw);
-    pushCandidate(hour, 0, period, approximate);
-  }
-
-  return { candidates, ambiguous };
-}
-
-
-function extractExplicitReminderSegment(text: string) {
-  const patterns = [
-    /\b(?:but\s+)?(?:need|needs|want|wants|set|add)?\s*(?:a\s+)?reminders?\s+at\s+(.+?)(?:$|\bas\b|\bbecause\b|\bwhile\b)/i,
-    /\b(?:remind me|notify me|alert me)\s+at\s+(.+?)(?:$|\bas\b|\bbecause\b|\bwhile\b)/i,
-    /\b(?:reminder|reminders)\s+(?:at|for)\s+(.+?)(?:$|\bas\b|\bbecause\b|\bwhile\b)/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match?.[1]) {
-      return match[1]
-        .replace(/\b(and\s+then|then)\b/gi, " and ")
-        .replace(/[.!?]+$/g, "")
-        .trim();
-    }
-  }
-
-  return "";
-}
-
-type RawTimeCandidate = {
-  hour: number;
-  minute: number;
-  period: string;
-  approximate: boolean;
-};
-
-function extractRawTimeCandidates(text: string) {
-  const lower = text.toLowerCase();
-  const rawCandidates: RawTimeCandidate[] = [];
-
-  const numericRegex = /\b(around|about|approx|approximately|near|roughly)?\s*(\d{1,2})(?:\s*-?\s*ish|ish)?(?:(?::|\.)(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?\b/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = numericRegex.exec(lower))) {
-    const hour = Number(match[2]);
-    const minute = match[3] ? Number(match[3]) : 0;
-
-    if (hour < 1 || hour > 23 || minute < 0 || minute > 59) continue;
-
-    rawCandidates.push({
-      hour,
-      minute,
-      period: match[4] || "",
-      approximate: Boolean(match[1]) || /ish/.test(match[0]),
-    });
-  }
-
-  const wordRegex = /\b(around|about|approx|approximately|near|roughly)?\s*(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s*-?\s*ish|ish)?\s*(am|pm|a\.m\.|p\.m\.)?\b/g;
-
-  while ((match = wordRegex.exec(lower))) {
-    rawCandidates.push({
-      hour: wordOrNumberToNumber(match[2]),
-      minute: 0,
-      period: match[3] || "",
-      approximate: Boolean(match[1]) || /ish/.test(match[0]),
-    });
-  }
-
-  return rawCandidates;
-}
-
-function normalizeReminderHourAgainstEvent(
-  hour: number,
-  minute: number,
-  period: string,
-  eventTime: TimeSlot | null,
-  contextText: string
-) {
-  if (period) return normalizeHour(hour, period, contextText);
-  if (hour > 12) return hour;
-
-  if (eventTime && eventTime.hour >= 12 && hour >= 1 && hour <= 11) {
-    const pmHour = hour + 12;
-    const reminderMinutes = pmHour * 60 + minute;
-    const eventMinutes = eventTime.hour * 60 + eventTime.minute;
-
-    if (reminderMinutes <= eventMinutes) return pmHour;
-  }
-
-  if (eventTime && eventTime.hour >= 12 && hour === 12) return 12;
-
-  return normalizeHour(hour, period, contextText);
-}
-
-function extractExplicitReminderTimes(
-  reminderText: string,
-  eventTime: TimeSlot | null,
-  contextText: string
-) {
-  const slots: TimeSlot[] = [];
-  const seen = new Set<string>();
-  const rawCandidates = extractRawTimeCandidates(reminderText);
-
-  rawCandidates.forEach((candidate) => {
-    const normalizedHour = normalizeReminderHourAgainstEvent(
-      candidate.hour,
-      candidate.minute,
-      candidate.period,
-      eventTime,
-      contextText
-    );
-
-    if (normalizedHour < 0 || normalizedHour > 23) return;
-
-    const key = `${normalizedHour}:${candidate.minute}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-
-    slots.push(makeTimeSlot(normalizedHour, candidate.minute, "reminder", candidate.approximate));
-  });
-
-  return slots;
-}
-
-function extractEventAndReminderTimes(text: string, contextText: string) {
-  const lower = text.toLowerCase();
-  let eventTime: TimeSlot | null = null;
-  let reminderTimes: TimeSlot[] = [];
-  let ambiguousHour: number | null = null;
-  let ambiguousMinute = 0;
-  let ambiguousApproximate = false;
-
-  const eventMatch = lower.match(
-    /\b(?:as|while|because)?\s*(?:the\s+)?(?:lunch|dinner|meeting|event|appointment|date|call|match|class)\s+(?:is\s+)?at\s+([\w:.\-\s]+?)(?:$|\.|,|\band\b|\bso\b|\bbut\b|\bneed\b|\btoday\b|\btomorrow\b)/
-  );
-
-  if (eventMatch) {
-    const extracted = extractTimeCandidates(eventMatch[1], contextText, "event");
-    eventTime = extracted.candidates[0] || null;
-  }
-
-  const reminderIntent = /\b(reminder|remind|notify|alert)\b/.test(lower);
-  const beforeOffsetMinutes = extractBeforeOffsetMinutes(lower);
-
-  if (eventTime && beforeOffsetMinutes) {
-    reminderTimes = [subtractMinutes(eventTime, beforeOffsetMinutes)];
-    return {
-      eventTime,
-      reminderTimes,
-      ambiguousHour,
-      ambiguousMinute,
-      ambiguousApproximate,
-    };
-  }
-
-  const explicitReminderSegment = extractExplicitReminderSegment(text);
-
-  if (explicitReminderSegment) {
-    reminderTimes = extractExplicitReminderTimes(explicitReminderSegment, eventTime, contextText);
-
-    if (reminderTimes.length > 0) {
-      return {
-        eventTime,
-        reminderTimes,
-        ambiguousHour,
-        ambiguousMinute,
-        ambiguousApproximate,
-      };
-    }
-  }
-
-  const beforeEvent = lower.split(/\b(?:as|while|because)\b/)[0];
-  const reminderText = reminderIntent ? beforeEvent : text;
-  const source: TimeSlot["source"] = reminderIntent ? "reminder" : "general";
-  const extracted = extractTimeCandidates(reminderText, contextText, source);
-
-  reminderTimes = extracted.candidates.filter((candidate) => {
-    if (!eventTime) return true;
-    return !(candidate.hour === eventTime.hour && candidate.minute === eventTime.minute && source === "general");
-  });
-
-  if (extracted.ambiguous.length > 0 && reminderTimes.length === 0) {
-    ambiguousHour = extracted.ambiguous[0].hour;
-    ambiguousMinute = extracted.ambiguous[0].minute;
-    ambiguousApproximate = extracted.ambiguous[0].approximate;
-  }
-
-  if (eventTime && reminderTimes.length > 0) {
-    reminderTimes = reminderTimes.map((time) => {
-      if (time.hour <= 11 && eventTime && eventTime.hour >= 12) {
-        return makeTimeSlot(time.hour + 12, time.minute, "reminder", time.approximate);
-      }
-      return time;
-    });
-  }
-
-  return {
-    eventTime,
-    reminderTimes,
-    ambiguousHour,
-    ambiguousMinute,
-    ambiguousApproximate,
-  };
-}
-
-function cleanTaskText(text: string) {
-  let cleaned = text
-    .replace(/\b(?:but\s+)?(?:need|needs|want|wants|set|add)?\s*(?:a\s+)?reminders?\s+at\s+.*$/gi, "")
-    .replace(/\b(?:remind me|notify me|alert me)\s+at\s+.*$/gi, "")
-    .replace(/\b(?:but\s+)?need\s+.*$/gi, "")
-    .replace(/\b(reminder|remind me|notify me|alert me)\s+(for|about|to)?\b/gi, "")
-    .replace(/day after tomorrow/gi, "")
-    .replace(/today|tomorrow/gi, "")
-    .replace(/\b(this\s+|next\s+)?(sun|sunday|mon|monday|tue|tuesday|wed|wednesday|thu|thursday|fri|friday|sat|saturday)\b/gi, "")
-    .replace(/\b(?:on\s+|the\s+)?\d{1,2}(st|nd|rd|th)\b/gi, "")
-    .replace(/\bon\s+\d{1,2}\b/gi, "")
-    .replace(/\bfor\s+\d{1,2}(st|nd|rd|th)?\b/gi, "")
-    .replace(/\b\d{1,2}[/-]\d{1,2}([/-]\d{2,4})?\b/gi, "")
-    .replace(/\b\d{1,2}(st|nd|rd|th)?\s+(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\b/gi, "")
-    .replace(/\b(?:at\s*)?\d{1,2}(?::|\.)\d{2}\s*(am|pm|a\.m\.|p\.m\.)?\b/gi, "")
-    .replace(/\bat\s+\d{1,2}\s*(am|pm|a\.m\.|p\.m\.)?\b/gi, "")
-    .replace(/\b\d{1,2}\s*(am|pm|a\.m\.|p\.m\.)\b/gi, "")
-    .replace(/\b(around|about|approx|approximately|near|roughly)\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d{1,2})(\s*-?\s*ish|ish)?\b/gi, "")
-    .replace(/\b(half\s+an?\s+hour|half\s+hour)\s+before\b/gi, "")
-    .replace(/\b(an?\s+hour|one\s+hour)\s+before\b/gi, "")
-    .replace(/\bquarter\s+of\s+an?\s+hour\s+before\b/gi, "")
-    .replace(/\b(\d{1,3})\s*(minutes?|mins?|m)\s+before\b/gi, "")
-    .replace(/\b(\d{1,2})\s*(hours?|hrs?|h)\s+before\b/gi, "")
-    .replace(/\b(noon|midday|midnight|morning|afternoon|evening|night|tonight|after lunch|post lunch|before dinner|after dinner)\b/gi, "")
-    .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(\s*-?\s*ish|ish)?\b/gi, "")
-    .replace(/\b\d{1,2}(\s*-?\s*ish|ish)\b/gi, "")
-    .replace(/\bas\s+.*$/gi, "")
-    .replace(/\band then\b/gi, "")
-    .replace(/[,:;]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  cleaned = cleaned.replace(/^(for|about|to|at|on|but)\s+/i, "").trim();
-
-  if (/^(reminder|remind|notify|alert)$/i.test(cleaned)) return "";
-  return cleaned;
-}
-
-function deriveCategory(text: string): ReminderCategory {
-  const lower = text.toLowerCase();
-
-  const categoryWords: { category: ReminderCategory; words: string[] }[] = [
-    {
-      category: "Finance",
-      words: ["bill", "payment", "emi", "bank", "tax", "invoice", "salary", "rent", "recharge", "electricity"],
-    },
-    {
-      category: "Health",
-      words: ["doctor", "medicine", "meds", "tablet", "gym", "walk", "exercise", "hospital", "health", "appointment"],
-    },
-    {
-      category: "Family",
-      words: ["mom", "mother", "dad", "father", "wife", "husband", "son", "daughter", "family", "parents"],
-    },
-    {
-      category: "Travel",
-      words: ["flight", "train", "airport", "station", "trip", "travel", "hotel", "cab", "uber", "delhi", "mumbai", "pack"],
-    },
-    {
-      category: "Home",
-      words: ["ac", "repair", "plumber", "electrician", "cleaning", "maid", "home", "gas", "groceries"],
-    },
-    {
-      category: "Work",
-      words: ["boss", "client", "office", "meeting", "project", "interview", "presentation", "report", "sales", "team", "manager", "work"],
-    },
-    {
-      category: "Social",
-      words: ["dinner", "lunch", "party", "movie", "date", "friend", "rohan", "zuzu", "catch up", "coffee"],
-    },
-    {
-      category: "Personal",
-      words: ["birthday", "anniversary", "shopping", "personal", "table tennis", "match"],
-    },
-  ];
-
-  for (const item of categoryWords) {
-    if (item.words.some((word) => lower.includes(word))) return item.category;
-  }
-
-  return "General";
-}
-
-function buildDraft(base: DraftReminder | null, text: string): DraftReminder {
-  const namedTask = extractNamedTask(text) || extractCorrectionTask(text);
-  const rawText = [base?.rawText, text].filter(Boolean).join(" ").trim();
-  const contextText = `${base?.title || ""} ${rawText}`.trim();
-  const date = extractDate(text);
-
-  if (base?.ambiguousHour !== null && base?.ambiguousHour !== undefined) {
-    const ampmWithOptionalHour = text.trim().toLowerCase().match(/^(?:(\d{1,2})(?::|\.)?(\d{2})?\s*)?(am|a\.m\.|pm|p\.m\.)$/);
-
-    if (ampmWithOptionalHour) {
-      const period = ampmWithOptionalHour[3].startsWith("p") ? "pm" : "am";
-      const hour = ampmWithOptionalHour[1] ? Number(ampmWithOptionalHour[1]) : base.ambiguousHour;
-      const minute = ampmWithOptionalHour[2] ? Number(ampmWithOptionalHour[2]) : base.ambiguousMinute;
-      const finalHour = normalizeHour(hour, period, "");
-      const resolvedTime = makeTimeSlot(finalHour, minute, "general", base.ambiguousApproximate);
-      const resolvedDateISO = date?.dateISO || base.dateISO;
-      const resolvedDateText = date?.dateText || base.dateText;
-      const resolvedDatePhrase = date?.datePhrase || base.datePhrase;
-      const resolvedTitle = base.title;
-      const resolvedMissing: MissingField[] = [];
-
-      if (!resolvedTitle) resolvedMissing.push("reminder details");
-      if (!resolvedDateISO) resolvedMissing.push("date");
-      if (!resolvedTime) resolvedMissing.push("time");
-
-      return {
-        ...base,
-        rawText,
-        title: resolvedTitle,
-        dateISO: resolvedDateISO,
-        dateText: resolvedDateText,
-        datePhrase: resolvedDatePhrase,
-        dateAssumed: date?.dateAssumed ?? base.dateAssumed,
-        time: resolvedTime,
-        reminderTimes: [resolvedTime],
-        dueAt: dueAtFor(resolvedDateISO, resolvedTime),
-        missing: resolvedMissing,
-        ambiguousHour: null,
-        ambiguousMinute: 0,
-        ambiguousApproximate: false,
-      };
-    }
-  }
-
-  const timeData = extractEventAndReminderTimes(text, contextText);
-
-  let title = base?.title || "";
-  const cleanedTitle = cleanTaskText(text);
-
-  if (namedTask) {
-    title = namedTask;
-  } else if (cleanedTitle && !isTimeOnlyNumber(cleanedTitle)) {
-    if (!base?.title) title = cleanedTitle;
-  }
-
-  const dateISO = date?.dateISO || base?.dateISO || null;
-  const dateText = date?.dateText || base?.dateText || "";
-  const datePhrase = date?.datePhrase || base?.datePhrase || "";
-  const dateAssumed = date?.dateAssumed ?? base?.dateAssumed ?? false;
-  const eventTime = timeData.eventTime || base?.eventTime || null;
-  const hasNewConcreteTime = timeData.reminderTimes.length > 0;
-  const hasNewAmbiguousTime = timeData.ambiguousHour !== null && timeData.ambiguousHour !== undefined;
-
-  let reminderTimes = hasNewConcreteTime ? timeData.reminderTimes : base?.reminderTimes || [];
-  let time = reminderTimes[0] || base?.time || null;
-  let ambiguousHour = hasNewConcreteTime ? null : timeData.ambiguousHour ?? base?.ambiguousHour ?? null;
-  let ambiguousMinute = hasNewConcreteTime ? 0 : timeData.ambiguousMinute || base?.ambiguousMinute || 0;
-  let ambiguousApproximate = hasNewConcreteTime ? false : timeData.ambiguousApproximate || base?.ambiguousApproximate || false;
-
-  if (!hasNewConcreteTime && hasNewAmbiguousTime && eventTime) {
-    let inferredHour = timeData.ambiguousHour as number;
-
-    if (eventTime.hour >= 12 && inferredHour >= 1 && inferredHour <= 11) {
-      inferredHour += 12;
-    }
-
-    const inferredTime = makeTimeSlot(
-      inferredHour,
-      timeData.ambiguousMinute,
-      "reminder",
-      timeData.ambiguousApproximate
-    );
-
-    reminderTimes = [inferredTime];
-    time = inferredTime;
-    ambiguousHour = null;
-    ambiguousMinute = 0;
-    ambiguousApproximate = false;
-  }
-
-
-  if (time && reminderTimes.length === 0) {
-    reminderTimes = [time];
-  }
-
-  const dueAt = dueAtFor(dateISO, time);
-  const category = deriveCategory(`${title} ${rawText}`);
-  const missing: MissingField[] = [];
-
-  if (!title) missing.push("reminder details");
-  if (!dateISO) missing.push("date");
-  if (!time) missing.push("time");
-  if (ambiguousHour !== null) missing.push("ampm");
-
-  return {
-    title,
-    rawText,
-    dateISO,
-    dateText,
-    datePhrase,
-    time,
-    reminderTimes,
-    eventTime,
-    dueAt,
-    missing,
-    dateAssumed,
-    ambiguousHour,
-    ambiguousMinute,
-    ambiguousApproximate,
-    category,
-  };
 }
 
 function normalizeReminder(item: any): Reminder {
-  const normalized: Reminder = {
-    id: item.id || createId(),
+  return {
+    id: item.id || safeId(),
     title: item.title || "Untitled reminder",
     rawText: item.rawText || item.title || "",
     dateText: item.dateText || "Date missing",
@@ -1040,227 +97,93 @@ function normalizeReminder(item: any): Reminder {
     timeText: item.timeText || "Time missing",
     dueAt: item.dueAt || null,
     status: item.status || "needs_info",
-    category: item.category || deriveCategory(`${item.title || ""} ${item.rawText || ""}`),
+    category: item.category || "General",
     createdAt: item.createdAt || new Date().toISOString(),
     notifiedAt: item.notifiedAt || null,
     approximateTime: item.approximateTime || false,
-    eventTimeText: item.eventTimeText || "",
+    eventAt: item.eventAt || null,
+    eventDateText: item.eventDateText,
+    eventTimeText: item.eventTimeText,
+    eventPhrase: item.eventPhrase,
+    sourceDraftId: item.sourceDraftId,
   };
-
-  if (normalized.status === "confirmed" && normalized.dueAt && new Date(normalized.dueAt).getTime() < Date.now()) {
-    return { ...normalized, status: "archived" };
-  }
-
-  return normalized;
-}
-
-function normalizeChatMessage(item: any): ChatMessage | null {
-  if (!item || (item.role !== "user" && item.role !== "assistant") || typeof item.text !== "string") {
-    return null;
-  }
-
-  return {
-    id: item.id || createId(),
-    role: item.role,
-    text: item.text,
-    createdAt: item.createdAt || new Date().toISOString(),
-  };
-}
-
-function normalizeDraft(item: any): DraftReminder | null {
-  if (!item || typeof item !== "object") return null;
-
-  const title = typeof item.title === "string" ? item.title : "";
-  const rawText = typeof item.rawText === "string" ? item.rawText : "";
-  const dateISO = typeof item.dateISO === "string" ? item.dateISO : null;
-  const dateText = typeof item.dateText === "string" ? item.dateText : "";
-  const datePhrase = typeof item.datePhrase === "string" ? item.datePhrase : "";
-  const time = item.time && typeof item.time.hour === "number" ? item.time : null;
-  const reminderTimes = Array.isArray(item.reminderTimes) ? item.reminderTimes.filter((timeItem: any) => typeof timeItem?.hour === "number") : [];
-  const eventTime = item.eventTime && typeof item.eventTime.hour === "number" ? item.eventTime : null;
-  const missing = Array.isArray(item.missing) ? item.missing.filter((value: any) => ["reminder details", "date", "time", "ampm"].includes(value)) : [];
-
-  return {
-    title,
-    rawText,
-    dateISO,
-    dateText,
-    datePhrase,
-    time,
-    reminderTimes,
-    eventTime,
-    dueAt: typeof item.dueAt === "string" ? item.dueAt : null,
-    missing,
-    dateAssumed: Boolean(item.dateAssumed),
-    ambiguousHour: typeof item.ambiguousHour === "number" ? item.ambiguousHour : null,
-    ambiguousMinute: typeof item.ambiguousMinute === "number" ? item.ambiguousMinute : 0,
-    ambiguousApproximate: Boolean(item.ambiguousApproximate),
-    category: item.category || "General",
-  };
-}
-
-function isSaveLike(text: string) {
-  const lower = text.toLowerCase().trim();
-  if (/\bsave it as\b/.test(lower)) return false;
-
-  return ["yes", "save", "save it", "looks good", "go ahead", "perfect", "done", "ok", "okay"].some(
-    (word) => lower === word || lower.includes(word)
-  );
-}
-
-function isChangeLike(text: string) {
-  const lower = text.toLowerCase().trim();
-  return /^(change|edit|adjust|tweak|modify)(\s+it|\s+this|\s+the reminder)?\b/.test(lower);
-}
-
-function isCancelLike(text: string) {
-  const lower = text.toLowerCase().trim();
-  return ["cancel", "drop it", "not needed", "doesn't work", "doesnt work", "doesn’t work"].some(
-    (word) => lower === word || lower.includes(word)
-  );
-}
-
-function buildQuestion(draft: DraftReminder, seed: number) {
-  if (draft.missing.includes("ampm") && draft.ambiguousHour !== null) {
-    return `Just confirming — do you mean ${draft.ambiguousHour}:00 AM or ${draft.ambiguousHour}:00 PM?`;
-  }
-
-  if (draft.missing.includes("reminder details")) {
-    const schedule = [draft.datePhrase, draft.time?.text].filter(Boolean).join(" at ");
-    if (schedule) return `Sure — what should I remind you about ${schedule ? `for ${schedule}` : ""}?`;
-    return "Sure — what should I remind you about?";
-  }
-
-  if (draft.missing.includes("date")) {
-    return pickTemplate(
-      [
-        "Sure — which day should I set this for?",
-        "Okay — what date should I use for this?",
-        "Got it. Which day would you like this reminder on?",
-      ],
-      seed
-    );
-  }
-
-  if (draft.missing.includes("time")) {
-    return pickTemplate(
-      [
-        "Sure — what time should I remind you?",
-        "Okay — what time should I set this for?",
-        "Got it. What time works for this reminder?",
-      ],
-      seed
-    );
-  }
-
-  if (draft.reminderTimes.length > 1 && draft.eventTime) {
-    const reminders = draft.reminderTimes.map((item) => item.text).join(" and ");
-    return `Got it — ${draft.title} is ${draft.datePhrase} at ${draft.eventTime.text}. You want reminders at ${reminders}. Should I save these reminders, adjust them, or drop them?`;
-  }
-
-  const schedule = [draft.datePhrase, draft.time?.text].filter(Boolean).join(", reminder time " );
-
-  return pickTemplate(
-    [
-      `Perfect — ${draft.title}, ${schedule}. Should I save this reminder, would you like to change something, or does this not work for you?`,
-      `This looks ready — ${draft.title}, ${schedule}. Should I go ahead and save it, or would you like to tweak anything?`,
-      `Got it — ${draft.title}, ${schedule}. Do you want me to save this reminder, adjust it, or drop it?`,
-    ],
-    seed
-  );
-}
-
-function canSaveDraft(draft: DraftReminder | null) {
-  if (!draft) return false;
-  return Boolean(draft.title && draft.dateISO && draft.time && draft.dueAt && draft.missing.length === 0);
-}
-
-function savedMessageFor(reminders: Reminder[]) {
-  if (reminders.length > 1) {
-    const first = reminders[0];
-    return `Done — I’ve saved ${reminders.length} reminders for ${first.title}.`;
-  }
-
-  const item = reminders[0];
-  const eventText = item.eventTimeText ? ` The event is at ${item.eventTimeText}.` : "";
-  return `Done — I’ll remind you about ${item.title} ${item.datePhrase} at ${item.timeText}.${eventText}`;
 }
 
 function App() {
   const [input, setInput] = useState("");
-  const [draft, setDraft] = useState<DraftReminder | null>(null);
-  const [lastContext, setLastContext] = useState<DraftReminder | null>(null);
+  const [draft, setDraft] = useState<ReminderDraft | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [activeFilter, setActiveFilter] = useState<ReminderFilter>("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isListening, setIsListening] = useState(false);
+  const [learning, setLearning] = useState<LearningMemory>(DEFAULT_LEARNING_MEMORY);
+  const [notificationState, setNotificationState] = useState<NotificationState>("unsupported");
   const [voiceMessage, setVoiceMessage] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
+  const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
-  const [notificationState, setNotificationState] = useState<NotificationState>("unsupported");
+  const [actionButtonsArmed, setActionButtonsArmed] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    const isHttps = window.location.protocol === "https:" || window.location.hostname === "localhost";
+
     if (!("Notification" in window)) {
       setNotificationState("unsupported");
-    } else if (!window.isSecureContext) {
-      setNotificationState("requires_https");
+    } else if (!isHttps) {
+      setNotificationState("https-needed");
     } else {
       setNotificationState(Notification.permission);
     }
 
-    const currentSaved = localStorage.getItem(STORAGE_KEY);
-    const oldSaved = OLD_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
-    const saved = currentSaved || oldSaved;
-
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
+    try {
+      const savedReminders = localStorage.getItem(REMINDERS_KEY);
+      if (savedReminders) {
+        const parsed = JSON.parse(savedReminders);
         setReminders(Array.isArray(parsed) ? parsed.map(normalizeReminder) : []);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
       }
-    }
 
-    const savedChat = localStorage.getItem(CHAT_STORAGE_KEY);
-    if (savedChat) {
-      try {
-        const parsedChat = JSON.parse(savedChat);
-        const restoredMessages = Array.isArray(parsedChat.messages)
-          ? parsedChat.messages.map(normalizeChatMessage).filter(Boolean).slice(-30)
-          : [];
-        const restoredDraft = normalizeDraft(parsedChat.draft);
-        const restoredLastContext = normalizeDraft(parsedChat.lastContext);
-
-        setMessages(restoredMessages as ChatMessage[]);
-        setDraft(restoredDraft);
-        setLastContext(restoredLastContext);
-        setInput(typeof parsedChat.input === "string" ? parsedChat.input : "");
-      } catch {
-        localStorage.removeItem(CHAT_STORAGE_KEY);
+      const savedMessages = localStorage.getItem(MESSAGES_KEY);
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        setMessages(Array.isArray(parsed) ? parsed.slice(-8) : []);
       }
+
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed && parsed.id) setDraft(parsed);
+      }
+
+      const savedLearning = localStorage.getItem(LEARNING_KEY);
+      if (savedLearning) {
+        setLearning({ ...DEFAULT_LEARNING_MEMORY, ...JSON.parse(savedLearning) });
+      }
+    } catch {
+      // Ignore corrupted local state
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(reminders));
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
   }, [reminders]);
 
   useEffect(() => {
-    const chatState = {
-      messages: messages.slice(-30),
-      draft,
-      lastContext,
-      input,
-    };
-
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatState));
-  }, [messages, draft, lastContext, input]);
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages.slice(-12)));
+  }, [messages]);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (draft) localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    else localStorage.removeItem(DRAFT_KEY);
+  }, [draft]);
+
+  useEffect(() => {
+    localStorage.setItem(LEARNING_KEY, JSON.stringify(learning));
+  }, [learning]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, draft]);
 
   useEffect(() => {
@@ -1269,102 +192,107 @@ function App() {
         const now = Date.now();
         const dueItems: Reminder[] = [];
 
-        return previous.map((item) => {
+        const next = previous.map((item): Reminder => {
           const isDue =
             item.status === "confirmed" &&
             item.dueAt &&
+            !item.notifiedAt &&
             new Date(item.dueAt).getTime() <= now;
 
           if (isDue) {
-            if (!item.notifiedAt) dueItems.push(item);
-
+            dueItems.push(item);
             return {
               ...item,
-              notifiedAt: item.notifiedAt || new Date().toISOString(),
-              status: "archived" as ReminderStatus,
+              notifiedAt: new Date().toISOString(),
+            };
+          }
+
+          if (
+            item.status === "confirmed" &&
+            item.dueAt &&
+            item.notifiedAt &&
+            new Date(item.dueAt).getTime() < now
+          ) {
+            return {
+              ...item,
+              status: "archived",
             };
           }
 
           return item;
-        }).map((item, index, array) => {
-          if (index === array.length - 1) {
-            dueItems.forEach((dueItem) => {
-              if (notificationsCanBeRequested() && Notification.permission === "granted") {
-                new Notification("Reminder due", { body: dueItem.title });
-              } else {
-                window.alert(`Reminder due: ${dueItem.title}`);
-              }
-            });
-          }
-          return item;
         });
+
+        dueItems.forEach((item) => {
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("RemindIQ", { body: item.title });
+          } else {
+            window.alert(`Reminder due: ${item.title}`);
+          }
+        });
+
+        return next;
       });
     }, 15000);
 
     return () => window.clearInterval(timer);
   }, []);
 
-  const visibleReminders = useMemo(() => reminders.filter((item) => item.status !== "archived"), [reminders]);
+  const activeReminders = useMemo(() => visibleReminders(reminders), [reminders]);
 
   const filteredReminders = useMemo(() => {
-    const now = new Date();
-    const query = searchTerm.trim().toLowerCase();
+    const term = search.trim().toLowerCase();
 
-    return visibleReminders.filter((item) => {
-      if (activeFilter === "done" && item.status !== "done") return false;
-      if (activeFilter === "today") {
-        if (!item.dueAt || !sameDate(new Date(item.dueAt), now)) return false;
-      }
-      if (activeFilter === "upcoming") {
-        if (!item.dueAt || new Date(item.dueAt).getTime() <= now.getTime() || item.status !== "confirmed") return false;
-      }
-      if (
-        !["all", "today", "upcoming", "done"].includes(activeFilter) &&
-        item.category !== activeFilter
-      ) {
-        return false;
-      }
+    return activeReminders.filter((reminder) => {
+      const matchesSearch =
+        !term ||
+        reminder.title.toLowerCase().includes(term) ||
+        reminder.category.toLowerCase().includes(term) ||
+        reminder.dateText.toLowerCase().includes(term) ||
+        reminder.timeText.toLowerCase().includes(term);
 
-      if (!query) return true;
+      if (!matchesSearch) return false;
 
-      const haystack = `${item.title} ${item.category} ${item.dateText} ${item.timeText} ${item.eventTimeText || ""}`.toLowerCase();
-      return haystack.includes(query);
+      if (activeFilter === "All") return true;
+      if (activeFilter === "Today") return isToday(reminder.dueAt);
+      if (activeFilter === "Upcoming") return reminder.status === "confirmed" && Boolean(reminder.dueAt);
+      if (activeFilter === "Done") return reminder.status === "done";
+
+      return reminder.category === activeFilter;
     });
-  }, [visibleReminders, activeFilter, searchTerm]);
+  }, [activeReminders, activeFilter, search]);
 
-  const confirmedCount = useMemo(
-    () => visibleReminders.filter((item) => item.status === "confirmed").length,
-    [visibleReminders]
+  const activeCount = activeReminders.filter((item) => item.status === "confirmed").length;
+  const doneCount = activeReminders.filter((item) => item.status === "done").length;
+  const readyToSave = Boolean(
+    draft &&
+      draft.alerts.length > 0 &&
+      draft.task.trim() &&
+      !draft.pendingAmbiguousTime &&
+      !draft.pendingInferenceConfirmation
   );
 
-  const doneCount = useMemo(
-    () => visibleReminders.filter((item) => item.status === "done").length,
-    [visibleReminders]
-  );
-
-  const draftReadyToSave = canSaveDraft(draft);
-
-  function addMessage(role: "user" | "assistant", text: string) {
-    const newMessage: ChatMessage = {
-      id: createId(),
-      role,
-      text,
-      createdAt: new Date().toISOString(),
-    };
-
-    setMessages((previous) => [...previous, newMessage]);
-  }
-
-  async function requestNotifications() {
-    if (!("Notification" in window)) {
-      setNotificationState("unsupported");
-      addMessage("assistant", "Browser alerts are not available in this mobile browser. Reminders will still work while the app is open.");
+  useEffect(() => {
+    if (!readyToSave) {
+      setActionButtonsArmed(false);
       return;
     }
 
-    if (!window.isSecureContext) {
-      setNotificationState("requires_https");
-      addMessage("assistant", "Browser alerts need HTTPS on mobile. This Wi-Fi preview link uses HTTP, so alerts may show as unavailable until we deploy or use a secure URL.");
+    setActionButtonsArmed(false);
+    const timer = window.setTimeout(() => setActionButtonsArmed(true), 450);
+    return () => window.clearTimeout(timer);
+  }, [readyToSave, draft?.id, draft?.alerts.length]);
+
+  async function requestNotifications() {
+    const isHttps = window.location.protocol === "https:" || window.location.hostname === "localhost";
+
+    if (!("Notification" in window)) {
+      setNotificationState("unsupported");
+      return;
+    }
+
+    if (!isHttps) {
+      setNotificationState("https-needed");
+      setVoiceMessage("Notifications need HTTPS on mobile. Local Wi-Fi preview can still test typing and reminders.");
       return;
     }
 
@@ -1372,124 +300,139 @@ function App() {
     setNotificationState(result);
   }
 
-  function processText(textToProcess: string) {
-    const updatedDraft = buildDraft(draft, textToProcess);
-    setDraft(updatedDraft);
-    addMessage("assistant", buildQuestion(updatedDraft, messages.length + reminders.length));
-  }
+  function saveDraft() {
+    if (!draft) return;
 
-  function saveCurrentDraft() {
-    if (!canSaveDraft(draft) || !draft) {
-      if (draft) addMessage("assistant", buildQuestion(draft, messages.length + reminders.length));
+    const result = createRemindersFromDraft(draft);
+
+    if (result.reminders.length === 0) {
+      setMessages((prev) => addMessageToList(prev, "assistant", result.assistantText));
       return;
     }
 
-    const timesToSave = draft.reminderTimes.length > 0 ? draft.reminderTimes : [draft.time as TimeSlot];
-    const savedItems: Reminder[] = timesToSave.map((time) => ({
-      id: createId(),
-      title: draft.title,
-      rawText: draft.rawText,
-      dateText: draft.dateText,
-      datePhrase: draft.datePhrase,
-      timeText: time.text,
-      dueAt: dueAtFor(draft.dateISO, time),
-      status: "confirmed",
-      category: draft.category,
-      createdAt: new Date().toISOString(),
-      notifiedAt: null,
-      approximateTime: time.approximate,
-      eventTimeText: draft.eventTime?.text || "",
-    }));
-
-    setReminders((prev) => [...savedItems, ...prev]);
-    setLastContext(draft);
-    addMessage("assistant", savedMessageFor(savedItems));
+    setReminders((prev) => [...result.reminders, ...prev]);
+    setLearning((prev) => updateLearningMemory(prev, result.reminders));
+    setMessages((prev) => addMessageToList(prev, "assistant", result.assistantText));
     setDraft(null);
-    setInput("");
   }
 
-  function handleSubmit(textOverride?: string) {
-    const cleanInput = (textOverride ?? input).trim();
-    if (!cleanInput) return;
+  function processText(text: string) {
+    const cleanText = text.trim();
+    if (!cleanText) return;
 
-    setInput("");
-    setVoiceMessage("");
-    addMessage("user", cleanInput);
+    setMessages((prev) => addMessageToList(prev, "user", cleanText));
 
-    if (draftReadyToSave && isSaveLike(cleanInput)) {
-      saveCurrentDraft();
-      setInput("");
-      setVoiceMessage("");
+    if (draft && readyToSave && isSaveIntent(cleanText)) {
+      setTimeout(saveDraft, 0);
       return;
     }
 
-    if (draft && isChangeLike(cleanInput)) {
-      setInput(draft.rawText);
+    if (draft && isCancelIntent(cleanText)) {
       setDraft(null);
-      addMessage("assistant", "Sure — make the change and send it again.");
-      setVoiceMessage("");
+      setMessages((prev) =>
+        addMessageToList(prev, "assistant", "No problem — I won’t save it. Tell me the next reminder when ready.")
+      );
       return;
     }
 
-    if (draft && isCancelLike(cleanInput)) {
+    if (draft && readyToSave && isChangeIntent(cleanText)) {
+      setInput(draft.rawText || draft.task);
       setDraft(null);
-      setInput("");
-      setVoiceMessage("");
-      addMessage("assistant", "No problem — I won’t save it. Tell me the next reminder when ready.");
+      setMessages((prev) => addMessageToList(prev, "assistant", "Sure — make the change and send it again."));
       return;
     }
 
-    if (draft && /what detail|which detail|what do you need|tell me what/i.test(cleanInput)) {
-      addMessage("assistant", buildQuestion(draft, messages.length + reminders.length));
-      setInput("");
-      return;
-    }
-
-    if (!draft && lastContext && /\b(what about|reminder|remind|notify|alert)\b/i.test(cleanInput)) {
-      const contextualDraft = buildDraft(lastContext, cleanInput);
-      setDraft(contextualDraft);
-      addMessage("assistant", buildQuestion(contextualDraft, messages.length + reminders.length));
-    } else {
-      processText(cleanInput);
-    }
-    setInput("");
-    setVoiceMessage("");
+    const result = processUserText(draft, cleanText, learning);
+    setDraft(result.draft);
+    setMessages((prev) => addMessageToList(prev, "assistant", result.assistantText));
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+  function handleSend() {
+    const cleanText = input.trim();
+    if (!cleanText) return;
+    setInput("");
+    setVoiceMessage("");
+    processText(cleanText);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      handleSubmit();
+      handleSend();
     }
   }
 
-
-  function handleComposerSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    handleSubmit();
+  function handleSaveClick() {
+    if (!actionButtonsArmed) return;
+    saveDraft();
   }
 
-  function handleSaveReminder() {
-    saveCurrentDraft();
-  }
-
-  function handleChangeDraft() {
+  function handleChangeClick() {
+    if (!actionButtonsArmed) return;
     if (!draft) return;
-    setInput(draft.rawText);
+    setInput(draft.rawText || draft.task);
     setDraft(null);
-    setVoiceMessage("");
-    addMessage("assistant", "Sure — make the change and send it again.");
+    setMessages((prev) => addMessageToList(prev, "assistant", "Sure — make the change and send it again."));
   }
 
-  function handleDoesNotWork() {
+  function handleDropClick() {
+    if (!actionButtonsArmed) return;
     setDraft(null);
-    setInput("");
-    setVoiceMessage("");
-    addMessage("assistant", "No problem — I won’t save it. Tell me the next reminder when ready.");
+    setMessages((prev) =>
+      addMessageToList(prev, "assistant", "No problem — I won’t save it. Tell me the next reminder when ready.")
+    );
   }
 
-  function handleDelete(id: string) {
-    setReminders((prev) => prev.filter((item) => item.id !== id));
+  function handleVoiceInput() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceMessage("Voice input is not supported in this browser. Try Chrome/Edge over HTTPS.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setIsListening(true);
+    setVoiceMessage("Listening... speak now.");
+
+    recognition.start();
+
+    recognition.onresult = (event: any) => {
+      const spokenText = event.results?.[0]?.[0]?.transcript || "";
+      setIsListening(false);
+
+      if (!spokenText.trim()) {
+        setVoiceMessage("I did not catch that. Please try again.");
+        return;
+      }
+
+      setInput("");
+      setVoiceMessage("Voice captured.");
+      processText(spokenText);
+    };
+
+    recognition.onerror = (event: any) => {
+      const error = event?.error || "unknown";
+      setIsListening(false);
+
+      if (error === "not-allowed") {
+        setVoiceMessage("Microphone permission is blocked. Allow microphone access in browser settings.");
+      } else if (error === "no-speech") {
+        setVoiceMessage("No speech was detected. Tap Speak and start talking immediately.");
+      } else if (window.location.protocol !== "https:" && window.location.hostname !== "localhost") {
+        setVoiceMessage("Voice may need HTTPS on mobile. Typing still works in local preview.");
+      } else {
+        setVoiceMessage(`Voice capture failed: ${error}.`);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
   }
 
   function handleMarkDone(id: string) {
@@ -1505,6 +448,10 @@ function App() {
     );
   }
 
+  function handleDelete(id: string) {
+    setReminders((prev) => prev.filter((item) => item.id !== id));
+  }
+
   function handleStartEdit(item: Reminder) {
     setEditingId(item.id);
     setEditText(item.rawText || item.title);
@@ -1516,23 +463,24 @@ function App() {
   }
 
   function handleSaveEdit(id: string) {
-    const updated = buildDraft(null, editText);
+    const empty = createEmptyDraft();
+    const result = processUserText(empty, editText, learning);
+    const save = result.draft ? createRemindersFromDraft(result.draft) : { reminders: [] as Reminder[], assistantText: "" };
 
+    if (save.reminders.length === 0) {
+      setMessages((prev) => addMessageToList(prev, "assistant", "I could not fully understand that edit. Please include task, day, and time."));
+      return;
+    }
+
+    const replacement = save.reminders[0];
     setReminders((prev) =>
       prev.map((item) =>
         item.id === id
           ? {
               ...item,
-              title: updated.title || item.title,
-              rawText: editText,
-              dateText: updated.dateText || item.dateText,
-              datePhrase: updated.datePhrase || item.datePhrase,
-              timeText: updated.time?.text || item.timeText,
-              dueAt: updated.dueAt || item.dueAt,
-              status: canSaveDraft(updated) ? "confirmed" : "needs_info",
-              category: updated.category,
-              eventTimeText: updated.eventTime?.text || item.eventTimeText,
-              notifiedAt: null,
+              ...replacement,
+              id,
+              createdAt: item.createdAt,
             }
           : item
       )
@@ -1542,109 +490,30 @@ function App() {
     setEditText("");
   }
 
-  async function handleVoiceInput() {
-    const SpeechRecognition = speechRecognitionConstructor();
-
-    if (!SpeechRecognition) {
-      setVoiceMessage("Voice input is not available in this browser. Try Chrome or Edge, or use the phone keyboard mic.");
-      return;
-    }
-
-    const permissionHint = await microphonePermissionHint();
-    if (permissionHint) {
-      setVoiceMessage(permissionHint);
-      return;
-    }
-
-    const readinessHint = voiceReadinessMessage();
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-IN";
-    recognition.interimResults = false;
-    recognition.continuous = false;
-    recognition.maxAlternatives = 1;
-
-    let receivedResult = false;
-    let receivedError = false;
-
-    setIsListening(true);
-    setVoiceMessage(
-      readinessHint
-        ? `${readinessHint} Listening anyway — speak your reminder now.`
-        : "Listening... speak your reminder now."
-    );
-
-    try {
-      recognition.start();
-    } catch {
-      setIsListening(false);
-      setVoiceMessage("Voice could not start. Please wait a second and try again, or type the reminder.");
-      return;
-    }
-
-    recognition.onresult = (event: any) => {
-      const spokenText = event.results?.[0]?.[0]?.transcript || "";
-      receivedResult = true;
-      setIsListening(false);
-      setVoiceMessage(spokenText ? `Heard: “${spokenText}”` : "Voice captured, but no clear text was detected.");
-
-      if (spokenText.trim()) {
-        handleSubmit(spokenText);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      receivedError = true;
-      setVoiceMessage(voiceErrorMessage(event?.error || "unknown"));
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-
-      if (!receivedResult && !receivedError) {
-        setVoiceMessage("Voice capture ended without text. Tap Speak again and start speaking immediately.");
-      }
-    };
-  }
-
   return (
     <main className="app-shell">
       <section className="conversation-shell">
-        <div className="brand-row">
+        <header className="app-header">
           <div>
-            <div className="top-pill">Sprint 2C Fix 2 · Stability Lock</div>
-            <h1>RemindIQ</h1>
+            <div className="top-line">
+              <span className="brand-name">RemindIQ</span>
+              <span className="memory-pill">Local memory</span>
+            </div>
             <p className="tagline">Natural reminders. Smarter follow-through.</p>
           </div>
-          <div className="today-card">
-            <span>Today</span>
-            <strong>{getTodayLabel()}</strong>
+
+          <div className="status-stack">
+            <span>{getTodayLabel()}</span>
+            <span>Alerts: {notificationState}</span>
           </div>
-        </div>
+        </header>
 
         <div className="utility-row">
-          <div className="mini-panel">
-            <span>Browser alerts</span>
-            <strong className="permission-pill">{notificationLabel(notificationState)}</strong>
-          </div>
-
-          <button
-            className="secondary-button"
-            onClick={requestNotifications}
-            type="button"
-            aria-label="Enable browser notifications"
-            disabled={notificationState === "requires_https" || notificationState === "unsupported"}
-          >
-            {notificationState === "requires_https" ? "HTTPS needed" : "Enable Notifications"}
+          <button className="secondary-button compact" onClick={requestNotifications} type="button">
+            Enable Notifications
           </button>
+          <span className="helper-text">Voice/alerts are best after HTTPS deployment.</span>
         </div>
-
-        {notificationState === "requires_https" && (
-          <p className="mobile-alert-note">Mobile browser alerts need HTTPS. This local Wi-Fi preview can still be used for app testing.</p>
-        )}
-
-        <p className="voice-support-note">Language engine hardened for multiple reminder times, before-event reminders, and corrections. Voice still works best after HTTPS deployment.</p>
 
         <div className="chat-panel">
           <div className="chat-thread">
@@ -1669,16 +538,16 @@ function App() {
               </div>
             ))}
 
-            {draftReadyToSave && (
+            {readyToSave && (
               <div className="message-row assistant-row">
                 <div className="action-bubble">
-                  <button className="confirm-button" onClick={handleSaveReminder} type="button">
+                  <button className="confirm-button" onClick={handleSaveClick} disabled={!actionButtonsArmed} type="button">
                     Save reminder
                   </button>
-                  <button className="quiet-action-button" onClick={handleChangeDraft} type="button">
+                  <button className="quiet-action-button" onClick={handleChangeClick} disabled={!actionButtonsArmed} type="button">
                     Change something
                   </button>
-                  <button className="danger-action-button" onClick={handleDoesNotWork} type="button">
+                  <button className="danger-action-button" onClick={handleDropClick} disabled={!actionButtonsArmed} type="button">
                     Doesn’t work
                   </button>
                 </div>
@@ -1688,18 +557,13 @@ function App() {
             <div ref={chatEndRef} />
           </div>
 
-          <form className="composer" onSubmit={handleComposerSubmit}>
+          <div className="composer">
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={draft ? 'Reply naturally, e.g. "Tuesday", "pm", or "Save it"' : 'Type a reminder, e.g. "Dinner at 9 pm Tuesday"'}
+              placeholder="Type naturally, e.g. Meeting at 7 pm today, remind me at 6 and 6.30"
               rows={2}
-              enterKeyHint="send"
-              autoCapitalize="sentences"
-              autoCorrect="on"
-              spellCheck={true}
-              aria-label="Reminder message input"
             />
 
             <div className="composer-actions">
@@ -1707,18 +571,13 @@ function App() {
                 {isListening ? "Listening..." : "Speak"}
               </button>
 
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() => handleSubmit()}
-                aria-label="Send reminder message"
-              >
+              <button className="primary-button" onClick={handleSend} type="button">
                 Send
               </button>
             </div>
 
             {voiceMessage && <p className="voice-message">{voiceMessage}</p>}
-          </form>
+          </div>
         </div>
       </section>
 
@@ -1726,43 +585,42 @@ function App() {
         <div className="list-header">
           <div>
             <h2>Saved reminders</h2>
-            <p>{confirmedCount} active · {doneCount} done</p>
+            <p>{activeCount} active · {doneCount} done</p>
           </div>
           <span>{filteredReminders.length}</span>
         </div>
 
         <input
           className="search-box"
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
           placeholder="Search reminders..."
         />
 
-        <div className="filter-row">
+        <div className="filter-wrap">
           {FILTERS.map((filter) => (
             <button
-              key={filter.value}
-              className={activeFilter === filter.value ? "filter-chip active" : "filter-chip"}
-              onClick={() => setActiveFilter(filter.value)}
+              key={filter}
+              className={activeFilter === filter ? "filter-chip active" : "filter-chip"}
+              onClick={() => setActiveFilter(filter)}
               type="button"
             >
-              {filter.label}
+              {filter}
             </button>
           ))}
         </div>
 
-        {filteredReminders.length === 0 ? (
-          <div className="empty-state">No reminders in this view.</div>
-        ) : (
-          <div className="reminder-list">
-            {filteredReminders.map((item) => (
+        <div className="reminder-list">
+          {filteredReminders.length === 0 ? (
+            <div className="empty-state">No reminders in this view.</div>
+          ) : (
+            filteredReminders.map((item) => (
               <article key={item.id} className={item.status === "done" ? "reminder-item done-item" : "reminder-item"}>
                 <div className="reminder-main">
-                  <div className="card-topline">
+                  <div className="status-line">
+                    <span className={`status-dot ${item.status === "done" ? "done" : item.status === "confirmed" ? "confirmed" : "warning"}`} />
+                    <small>{item.status === "done" ? "Done" : item.status === "confirmed" ? "Confirmed" : "Needs info"}</small>
                     <span className={`category-chip category-${item.category.toLowerCase()}`}>{item.category}</span>
-                    <span className={item.status === "done" ? "status-pill done-status" : "status-pill"}>
-                      {item.status === "done" ? "Done" : "Active"}
-                    </span>
                   </div>
 
                   {editingId === item.id ? (
@@ -1781,7 +639,7 @@ function App() {
                     <>
                       <h3>{item.title}</h3>
                       <p>Reminder: {item.dateText} · {item.timeText}</p>
-                      {item.eventTimeText && <p className="event-line">Event: {item.eventTimeText}</p>}
+                      {item.eventTimeText && <p className="event-line">Event: {item.eventDateText || item.dateText} · {item.eventTimeText}</p>}
                     </>
                   )}
                 </div>
@@ -1800,9 +658,18 @@ function App() {
                   </div>
                 )}
               </article>
+            ))
+          )}
+        </div>
+
+        <details className="test-bank">
+          <summary>Stabilisation test bank</summary>
+          <ul>
+            {getTestBank().map((test) => (
+              <li key={test}>{test}</li>
             ))}
-          </div>
-        )}
+          </ul>
+        </details>
       </section>
     </main>
   );

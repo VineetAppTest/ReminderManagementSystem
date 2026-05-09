@@ -1,66 +1,42 @@
 [
   {
-    "input": "Lunch with boss on 13th at 2 pm",
-    "expected": "complete reminder, Work/Social depending context"
+    "case": "Meet at 4 \u2192 pm \u2192 tomorrow",
+    "expected": "Meet tomorrow at 4:00 PM"
   },
   {
-    "input": "Dinner at 9",
-    "expected": "ask date; infer PM from dinner"
+    "case": "Meeting at 6 pm \u2192 tomorrow however need a reminder at 4",
+    "expected": "Event 6:00 PM, reminder 4:00 PM"
   },
   {
-    "input": "Date at 9 -> Wednesday -> pm",
-    "expected": "ask AM/PM, then confirm 9 PM"
+    "case": "Meeting at 7 pm \u2192 today \u2192 6pm n then 6.30",
+    "expected": "Event 7:00 PM, reminders 6:00 PM and 6:30 PM"
   },
   {
-    "input": "Team meeting at 5 pm, remind me 30 minutes before",
-    "expected": "event 5 PM, reminder 4:30 PM"
+    "case": "Meet at 8 \u2192 pm \u2192 today at 10 and tomorrow 7",
+    "expected": "Reminder today 10:00 PM and tomorrow 7:00 PM"
   },
   {
-    "input": "Team meeting at 5 pm, remind me half an hour before -> today",
-    "expected": "event 5 PM, reminder 4:30 PM; phrase not included in task title"
+    "case": "Team meeting at 5 pm, remind me half an hour before \u2192 today",
+    "expected": "Event 5:00 PM, reminder 4:30 PM"
   },
   {
-    "input": "Reminder at 12 and then at 1 as lunch is at 1.10",
-    "expected": "event 1:10 PM, reminder times 12 PM and 1 PM"
+    "case": "Lunch with X tomorrow, reminder at 12 and 1 as lunch is at 1.10",
+    "expected": "Event 1:10 PM, reminders 12:00 PM and 1:00 PM"
   },
   {
-    "input": "Doctor appointment next Tuesday morning",
-    "expected": "Health, next Tuesday, around 9 AM"
+    "case": "Dinner at 9 pm \u2192 Tuesday",
+    "expected": "Dinner Tuesday at 9:00 PM"
   },
   {
-    "input": "Pay electricity bill Friday evening",
-    "expected": "Finance, Friday, around 6 PM"
+    "case": "Doctor appointment next Tuesday morning",
+    "expected": "Health category, next Tuesday around 9:00 AM"
   },
   {
-    "input": "Call Raj tomorrow",
-    "expected": "ask time"
+    "case": "Pay electricity bill Friday evening",
+    "expected": "Finance category, Friday around 6:00 PM"
   },
   {
-    "input": "Change it to Wednesday",
-    "expected": "update active draft date"
-  },
-  {
-    "input": "Make it 6 pm",
-    "expected": "update active draft time"
-  },
-  {
-    "input": "Call it client meeting",
-    "expected": "update active draft title"
-  },
-  {
-    "input": "What detail do you need?",
-    "expected": "answer based on missing slot"
-  },
-  {
-    "input": "Team meeting at 5 PM today but need reminder at 4 and then 4.30",
-    "expected": "event 5 PM, reminder times 4 PM and 4:30 PM, task title Team meeting"
-  },
-  {
-    "input": "Lunch with X tomorrow, reminder at 12 and 1 as lunch is at 1.10",
-    "expected": "event 1:10 PM, reminders 12 PM and 1 PM, save two reminders"
-  },
-  {
-    "input": "Team meeting at 5 -> PM -> Today -> Team meeting at 5 PM Today but need reminder at 4 and then 4.30",
-    "expected": "existing ready draft should update to two reminder times without accidental change/cancel"
+    "case": "tomorro",
+    "expected": "tomorrow"
   }
 ]

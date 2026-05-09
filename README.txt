@@ -1,19 +1,26 @@
-RemindIQ Sprint 2C Fix 2 - Multiple Reminder Times + Stability Lock
+RemindIQ Sprint 2E-A Fix 5: Final Inference Gate
 
-Replace/add all files in your project with the files in this ZIP.
+Purpose:
+- Context-based AM/PM inference is allowed.
+- Hidden AM/PM inference is not allowed.
+- If MiniViktor infers AM/PM from event context/device context, it must explicitly ask the user to confirm the inferred AM/PM before showing save confirmation.
 
-Key fixes:
-1. Stops accidental "Change something" trigger unless user clearly asks to change/edit/adjust.
-2. Detects explicit reminder times like "need reminder at 4 and then 4.30".
-3. Handles multiple reminder alerts for one event.
-4. Keeps event time separate from reminder alert times.
-5. Removes phrases like "but need reminder at..." from task title.
-6. Retains before-event reminder support such as "half an hour before".
-7. Keeps strict save validation.
+Mandatory test:
+1. Meet at 7
+2. pm
+3. Tomorro
+4. Earlier reminder, today at 7 n tmrw at 5
 
-Primary UAT:
-- Team meeting at 5 PM Today but need reminder at 4 and then 4.30
-Expected: Event 5:00 PM, reminders 4:00 PM and 4:30 PM, task title Team meeting.
+Expected:
+MiniViktor must NOT go directly to save confirmation.
+It should say something like:
+"I’m reading that as today at 7:00 pm and tomorrow at 5:00 pm because Meet is tomorrow at 7:00 pm. Is that correct?"
 
-- Lunch with X tomorrow, reminder at 12 and 1 as lunch is at 1.10
-Expected: Event 1:10 PM, reminders 12:00 PM and 1:00 PM.
+Then after user says yes/correct/ok:
+It can move to save confirmation.
+
+Build:
+npm.cmd run build
+npm.cmd run preview -- --host 0.0.0.0
+
+Commit only if the inference assumption is visible and save is blocked until confirmed.
