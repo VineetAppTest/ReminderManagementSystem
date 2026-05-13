@@ -549,7 +549,1044 @@ export const MINI_VIKTOR_REGRESSION_CASES: MiniViktorRegressionCase[] = [
       ],
     },
     mustPassBeforeCalendar: true,
+  },  {
+    id: "mv-reg-031",
+    category: "general",
+    name: "call mom today explicit time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Call mom today at 7 pm"
+    ],
+    expected: {
+      taskIncludes: "call mom",
+      eventDatePhrase: "today",
+      eventTimeText: "7:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "7:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
   },
+  {
+    id: "mv-reg-032",
+    category: "general",
+    name: "doctor appointment tomorrow explicit morning time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Doctor appointment tomorrow at 11 am"
+    ],
+    expected: {
+      taskIncludes: "doctor appointment",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "11:00 am",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "11:00 am"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-033",
+    category: "weekday",
+    name: "friday evening finance reminder",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Pay rent Friday evening"
+    ],
+    expected: {
+      taskIncludes: "pay rent",
+      eventTimeText: "6:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          timeText: "6:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-034",
+    category: "before_event",
+    name: "30 minutes before 6 pm event",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Client call at 6 pm, remind me 30 minutes before",
+      "today"
+    ],
+    expected: {
+      taskIncludes: "client call",
+      eventDatePhrase: "today",
+      eventTimeText: "6:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "5:30 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-035",
+    category: "before_event",
+    name: "half hour before 5 pm event",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Standup at 5 pm, remind me half an hour before",
+      "today"
+    ],
+    expected: {
+      taskIncludes: "standup",
+      eventDatePhrase: "today",
+      eventTimeText: "5:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "4:30 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-036",
+    category: "date_typo",
+    name: "tommorow typo stays tomorrow",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet at 5",
+      "pm",
+      "tommorow"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "5:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "5:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-037",
+    category: "candidate_compliance",
+    name: "same day explicit two alerts with and separator",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meeting at 9 pm",
+      "today",
+      "reminder at 7 pm and 8 pm"
+    ],
+    expected: {
+      taskIncludes: "meeting",
+      eventDatePhrase: "today",
+      eventTimeText: "9:00 pm",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "7:00 pm"
+        },
+        {
+          datePhrase: "today",
+          timeText: "8:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-038",
+    category: "multiple_dates",
+    name: "two explicit dated reminders with comma separator",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet at 8",
+      "pm",
+      "tomorrow",
+      "today 6 pm, tomorrow 4 pm"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "8:00 pm",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "6:00 pm"
+        },
+        {
+          datePhrase: "tomorrow",
+          timeText: "4:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-039",
+    category: "event_vs_reminder",
+    name: "event time preserved with explicit reminder at",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Demo at 4 pm tomorrow",
+      "remind me at 3 pm"
+    ],
+    expected: {
+      taskIncludes: "demo",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "4:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "3:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-040",
+    category: "general",
+    name: "buy medicine tomorrow morning",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Buy medicine tomorrow morning"
+    ],
+    expected: {
+      taskIncludes: "buy medicine",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "9:00 am",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "9:00 am"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-041",
+    category: "general",
+    name: "midnight explicit reminder",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Submit form tomorrow midnight"
+    ],
+    expected: {
+      taskIncludes: "submit form",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "12:00 am",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "12:00 am"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-042",
+    category: "general",
+    name: "noon explicit reminder",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Call courier tomorrow noon"
+    ],
+    expected: {
+      taskIncludes: "call courier",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "12:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "12:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-043",
+    category: "visible_inference",
+    name: "bare earlier reminder requires confirmation",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet at 7",
+      "pm",
+      "tomorrow",
+      "earlier reminder at 5"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "7:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "5:00 pm"
+        }
+      ],
+      mustAskForInferenceConfirmation: true,
+      mustNotBeReadyToSave: true
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-044",
+    category: "general",
+    name: "call it title update keeps date and time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meeting tomorrow at 5 pm",
+      "call it client meeting"
+    ],
+    expected: {
+      taskIncludes: "client meeting",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "5:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "5:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-045",
+    category: "weekday",
+    name: "this friday explicit time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Review report this Friday at 4 pm"
+    ],
+    expected: {
+      taskIncludes: "review report",
+      eventTimeText: "4:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          timeText: "4:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-046",
+    category: "weekday",
+    name: "next monday explicit time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Gym next Monday at 7 am"
+    ],
+    expected: {
+      taskIncludes: "gym",
+      eventTimeText: "7:00 am",
+      alertCount: 1,
+      alerts: [
+        {
+          timeText: "7:00 am"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-047",
+    category: "event_vs_reminder",
+    name: "lunch is at event phrase with explicit tomorrow in first turn",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Lunch with Amit tomorrow reminder at 12 pm as lunch is at 1 pm"
+    ],
+    expected: {
+      taskIncludes: "lunch with amit",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "1:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "12:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-048",
+    category: "before_event",
+    name: "45 minutes before event",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Interview at 6 pm, remind me 45 minutes before",
+      "tomorrow"
+    ],
+    expected: {
+      taskIncludes: "interview",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "6:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "5:15 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-049",
+    category: "event_vs_reminder",
+    name: "meeting event and one earlier explicit reminder same sentence",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meeting at 8 pm", "tomorrow", "remind me at 7 pm"
+    ],
+    expected: {
+      taskIncludes: "meeting",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "8:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "7:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-050",
+    category: "candidate_compliance",
+    name: "ampm inheritance for second reminder time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meeting at 8",
+      "pm",
+      "today",
+      "6pm n then 6.30"
+    ],
+    expected: {
+      taskIncludes: "meeting",
+      eventDatePhrase: "today",
+      eventTimeText: "8:00 pm",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "6:00 pm"
+        },
+        {
+          datePhrase: "today",
+          timeText: "6:30 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-051",
+    category: "general",
+    name: "call friend day after tomorrow explicit time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Call friend day after tomorrow at 6 pm"
+    ],
+    expected: {
+      taskIncludes: "call friend",
+      eventTimeText: "6:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          timeText: "6:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-052",
+    category: "general",
+    name: "tonight phrase for dinner",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Dinner today at 9 pm"
+    ],
+    expected: {
+      taskIncludes: "dinner",
+      eventTimeText: "9:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          timeText: "9:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-053",
+    category: "date_typo",
+    name: "tdy with explicit time in same turn",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet tdy at 6 pm"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "today",
+      eventTimeText: "6:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "6:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-054",
+    category: "date_typo",
+    name: "tmr with explicit time in same turn",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet tmr at 6 pm"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "6:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "6:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-055",
+    category: "event_vs_reminder",
+    name: "event at 5 reminder at 4 same sentence",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Team sync today at 5 pm but reminder at 4 pm"
+    ],
+    expected: {
+      taskIncludes: "team sync",
+      eventDatePhrase: "today",
+      eventTimeText: "5:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "4:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-056",
+    category: "general",
+    name: "missing task remains blocked",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Reminder tomorrow at 5 pm",
+      "what detail do you need?"
+    ],
+    expected: {
+      mustNotBeReadyToSave: true
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-057",
+    category: "multiple_dates",
+    name: "dated reminder pair with explicit pm suffixes",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet at 8",
+      "pm",
+      "tomorrow",
+      "today at 7 pm and tomorrow at 5 pm"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "8:00 pm",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "7:00 pm"
+        },
+        {
+          datePhrase: "tomorrow",
+          timeText: "5:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-058",
+    category: "visible_inference",
+    name: "two bare dated reminders require visible inference",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet at 8",
+      "pm",
+      "tomorrow",
+      "today at 7 and tomorrow at 5"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "8:00 pm",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "7:00 pm"
+        },
+        {
+          datePhrase: "tomorrow",
+          timeText: "5:00 pm"
+        }
+      ],
+      mustAskForInferenceConfirmation: true,
+      mustNotBeReadyToSave: true
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-059",
+    category: "candidate_compliance",
+    name: "candidate correction with ordinal labels",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet at 8",
+      "pm",
+      "tomorrow",
+      "reminder for 3 n 7",
+      "first reminder today at 3 pm and second reminder tomorrow at 7 pm"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "8:00 pm",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "3:00 pm"
+        },
+        {
+          datePhrase: "tomorrow",
+          timeText: "7:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-060",
+    category: "event_vs_reminder",
+    name: "as meeting is at phrase",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meeting tomorrow at 5 pm", "remind me at 4 pm"
+    ],
+    expected: {
+      taskIncludes: "meeting",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "5:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "4:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-061",
+    category: "general",
+    name: "family call tomorrow evening",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Call dad tomorrow evening"
+    ],
+    expected: {
+      taskIncludes: "call dad",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "6:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "6:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-062",
+    category: "general",
+    name: "travel packing reminder",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Pack bags tomorrow night"
+    ],
+    expected: {
+      taskIncludes: "pack bags",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "9:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "9:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-063",
+    category: "before_event",
+    name: "half hour before webinar event",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Webinar at 5 pm, remind me half an hour before",
+      "tomorrow"
+    ],
+    expected: {
+      taskIncludes: "webinar",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "5:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "4:30 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-064",
+    category: "general",
+    name: "explicit at 2.30 dot time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Submit report tomorrow at 2.30 pm"
+    ],
+    expected: {
+      taskIncludes: "submit report",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "2:30 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "2:30 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-065",
+    category: "general",
+    name: "explicit at 2:30 colon time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Submit report tomorrow at 2:30 pm"
+    ],
+    expected: {
+      taskIncludes: "submit report",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "2:30 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "2:30 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-066",
+    category: "general",
+    name: "about three soft time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Tea with Rahul tomorrow about 3 pm"
+    ],
+    expected: {
+      taskIncludes: "tea with rahul",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "3:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "3:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-067",
+    category: "general",
+    name: "3ish soft time with explicit pm context",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Coffee tomorrow at 3 pm"
+    ],
+    expected: {
+      taskIncludes: "coffee",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "3:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "3:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-068",
+    category: "candidate_compliance",
+    name: "explicit ampersand separator",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meeting at 8",
+      "pm",
+      "today",
+      "6 pm & 7 pm"
+    ],
+    expected: {
+      taskIncludes: "meeting",
+      eventDatePhrase: "today",
+      eventTimeText: "8:00 pm",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "6:00 pm"
+        },
+        {
+          datePhrase: "today",
+          timeText: "7:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-069",
+    category: "candidate_compliance",
+    name: "explicit comma separator",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meeting at 8",
+      "pm",
+      "today",
+      "6 pm, 7 pm"
+    ],
+    expected: {
+      taskIncludes: "meeting",
+      eventDatePhrase: "today",
+      eventTimeText: "8:00 pm",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "6:00 pm"
+        },
+        {
+          datePhrase: "today",
+          timeText: "7:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-070",
+    category: "general",
+    name: "single complete tomorrow reminder baseline",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet tomorrow at 7 pm"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "7:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "7:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-071",
+    category: "general",
+    name: "single complete today reminder baseline",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Meet today at 6 pm"
+    ],
+    expected: {
+      taskIncludes: "meet",
+      eventDatePhrase: "today",
+      eventTimeText: "6:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "today",
+          timeText: "6:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-072",
+    category: "general",
+    name: "what detail needed after missing date",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Call Amit at 6 pm",
+      "what detail do you need?"
+    ],
+    expected: {
+      taskIncludes: "call amit",
+      eventTimeText: "6:00 pm",
+      mustNotBeReadyToSave: true
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-073",
+    category: "general",
+    name: "what detail needed after missing time",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Call Amit tomorrow",
+      "what detail do you need?"
+    ],
+    expected: {
+      taskIncludes: "call amit",
+      eventDatePhrase: "tomorrow",
+      mustNotBeReadyToSave: true
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-074",
+    category: "event_vs_reminder",
+    name: "doctor event with multiple earlier reminders",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Doctor appointment tomorrow at 11 am",
+      "remind me at 9 am and 10 am"
+    ],
+    expected: {
+      taskIncludes: "doctor appointment",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "11:00 am",
+      alertCount: 2,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "9:00 am"
+        },
+        {
+          datePhrase: "tomorrow",
+          timeText: "10:00 am"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+  {
+    id: "mv-reg-075",
+    category: "event_vs_reminder",
+    name: "party event with reminder before event",
+    nowISO: "2026-05-10T10:00:00+05:30",
+    turns: [
+      "Party tomorrow at 9 pm",
+      "remind me at 7 pm"
+    ],
+    expected: {
+      taskIncludes: "party",
+      eventDatePhrase: "tomorrow",
+      eventTimeText: "9:00 pm",
+      alertCount: 1,
+      alerts: [
+        {
+          datePhrase: "tomorrow",
+          timeText: "7:00 pm"
+        }
+      ]
+    },
+    mustPassBeforeCalendar: true
+  },
+
 ];
 
 function normalise(value: string | undefined | null) {
