@@ -22,6 +22,42 @@ import type { MiniViktorDatasetExport } from "./brain/miniViktorDatasetExport";
 
 type NotificationState = NotificationPermission | "unsupported" | "https-needed";
 
+type FeedbackIssueType =
+  | "Did not understand"
+  | "Wrong date"
+  | "Wrong time"
+  | "Wrong reminder/event split"
+  | "Wrong AM/PM assumption"
+  | "Multiple reminders issue"
+  | "Save/notification issue"
+  | "UI issue"
+  | "Other";
+
+type BetaFeedbackItem = {
+  id: string;
+  createdAt: string;
+  testerId: string;
+  issueType: FeedbackIssueType;
+  comment: string;
+  conversation: ChatMessage[];
+  activeDraft: ReminderDraft | null;
+  visibleRemindersSnapshot: Reminder[];
+  appUrl: string;
+  userAgent: string;
+};
+
+const FEEDBACK_ISSUE_TYPES: FeedbackIssueType[] = [
+  "Did not understand",
+  "Wrong date",
+  "Wrong time",
+  "Wrong reminder/event split",
+  "Wrong AM/PM assumption",
+  "Multiple reminders issue",
+  "Save/notification issue",
+  "UI issue",
+  "Other",
+];
+
 declare global {
   interface Window {
     SpeechRecognition?: any;
@@ -33,6 +69,8 @@ const REMINDERS_KEY = "remindiq_reminders_v2d_stable";
 const DRAFT_KEY = "remindiq_active_draft_v2d_stable";
 const MESSAGES_KEY = "remindiq_messages_v2d_stable";
 const LEARNING_KEY = "remindiq_learning_v2d_stable";
+const FEEDBACK_KEY = "remindiq_beta_feedback_v2h";
+const TESTER_KEY = "remindiq_beta_tester_id_v2h";
 
 const FILTERS: Array<"All" | "Today" | "Upcoming" | "Done" | ReminderCategory> = [
   "All",
@@ -132,6 +170,10 @@ function App() {
   const [brainReport, setBrainReport] = useState<MiniViktorRegressionReport | null>(null);
   const [simulationReport, setSimulationReport] = useState<MiniViktorSimulationReport | null>(null);
   const [datasetExport, setDatasetExport] = useState<MiniViktorDatasetExport | null>(null);
+  const [testerId, setTesterId] = useState("");
+  const [issueType, setIssueType] = useState<FeedbackIssueType>("Did not understand");
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [feedbackItems, setFeedbackItems] = useState<BetaFeedbackItem[]>([]);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -169,6 +211,15 @@ function App() {
       if (savedLearning) {
         setLearning({ ...DEFAULT_LEARNING_MEMORY, ...JSON.parse(savedLearning) });
       }
+
+      const savedTesterId = localStorage.getItem(TESTER_KEY);
+      if (savedTesterId) setTesterId(savedTesterId);
+
+      const savedFeedback = localStorage.getItem(FEEDBACK_KEY);
+      if (savedFeedback) {
+        const parsed = JSON.parse(savedFeedback);
+        setFeedbackItems(Array.isArray(parsed) ? parsed : []);
+      }
     } catch {
       // Ignore corrupted local state
     }
@@ -190,6 +241,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem(LEARNING_KEY, JSON.stringify(learning));
   }, [learning]);
+
+  useEffect(() => {
+    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(feedbackItems));
+  }, [feedbackItems]);
+
+  useEffect(() => {
+    localStorage.setItem(TESTER_KEY, testerId);
+  }, [testerId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -450,6 +509,89 @@ function App() {
     }
   }
 
+  function buildFeedbackSnapshot(): BetaFeedbackItem {
+    return {
+      id: safeId(),
+      createdAt: new Date().toISOString(),
+      testerId: testerId.trim() || "anonymous",
+      issueType,
+      comment: feedbackComment.trim(),
+      conversation: messages,
+      activeDraft: draft,
+      visibleRemindersSnapshot: activeReminders,
+      appUrl: window.location.href,
+      userAgent: navigator.userAgent,
+    };
+  }
+
+  function handleReportIssue() {
+    const snapshot = buildFeedbackSnapshot();
+    setFeedbackItems((prev) => [snapshot, ...prev].slice(0, 200));
+    setFeedbackComment("");
+    setMessages((prev) =>
+      addMessageToList(prev, "assistant", "Issue captured. Tap End Test to start the next test flow.")
+    );
+  }
+
+  function handleEndTest() {
+    setDraft(null);
+    setInput("");
+    setVoiceMessage("");
+    setMessages([
+      {
+        id: safeId(),
+        role: "assistant",
+        text: "New beta test started. Try the next reminder phrase.",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }
+
+  function feedbackToCsv(items: BetaFeedbackItem[]) {
+    const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const rows = [
+      ["createdAt", "testerId", "issueType", "comment", "conversation", "draft", "reminders", "appUrl", "userAgent"],
+      ...items.map((item) => [
+        item.createdAt,
+        item.testerId,
+        item.issueType,
+        item.comment,
+        item.conversation.map((message) => `${message.role}: ${message.text}`).join("\n"),
+        JSON.stringify(item.activeDraft),
+        JSON.stringify(item.visibleRemindersSnapshot),
+        item.appUrl,
+        item.userAgent,
+      ]),
+    ];
+
+    return rows.map((row) => row.map((cell) => escape(String(cell ?? ""))).join(",")).join("\n");
+  }
+
+  function downloadText(filename: string, contents: string, mimeType: string) {
+    const blob = new Blob([contents], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportFeedbackJson() {
+    downloadText("remindiq-beta-feedback.json", JSON.stringify(feedbackItems, null, 2), "application/json");
+  }
+
+  function handleExportFeedbackCsv() {
+    downloadText("remindiq-beta-feedback.csv", feedbackToCsv(feedbackItems), "text/csv");
+  }
+
+  function handleClearFeedback() {
+    setFeedbackItems([]);
+    setVoiceMessage("Local beta feedback cleared.");
+  }
+
   function handleVoiceInput() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -568,6 +710,7 @@ function App() {
               <span className="memory-pill">Retriever brain</span>
               <span className="memory-pill">Simulation lab</span>
               <span className="memory-pill">Dataset export</span>
+              <span className="memory-pill beta-pill">Beta feedback</span>
             </div>
             <p className="tagline">Natural reminders. Smarter follow-through.</p>
           </div>
@@ -731,6 +874,67 @@ function App() {
             ))
           )}
         </div>
+
+        <details className="beta-feedback">
+          <summary>Beta feedback mode</summary>
+
+          <div className="beta-grid">
+            <label>
+              <span>Tester ID</span>
+              <input
+                className="search-box"
+                value={testerId}
+                onChange={(event) => setTesterId(event.target.value)}
+                placeholder="Optional, e.g. tester-01"
+              />
+            </label>
+
+            <label>
+              <span>Issue type</span>
+              <select className="search-box" value={issueType} onChange={(event) => setIssueType(event.target.value as FeedbackIssueType)}>
+                {FEEDBACK_ISSUE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <textarea
+            className="feedback-note"
+            value={feedbackComment}
+            onChange={(event) => setFeedbackComment(event.target.value)}
+            placeholder="Optional comment: what went wrong or what you expected"
+            rows={3}
+          />
+
+          <div className="brain-actions beta-actions">
+            <button className="danger-action-button" onClick={handleReportIssue} type="button">
+              Report issue
+            </button>
+            <button className="quiet-action-button" onClick={handleEndTest} type="button">
+              End test / reset chat
+            </button>
+            <button className="quiet-action-button" onClick={handleExportFeedbackJson} disabled={feedbackItems.length === 0} type="button">
+              Export JSON
+            </button>
+            <button className="quiet-action-button" onClick={handleExportFeedbackCsv} disabled={feedbackItems.length === 0} type="button">
+              Export CSV
+            </button>
+          </div>
+
+          <div className="beta-footer">
+            <span>{feedbackItems.length} issue{feedbackItems.length === 1 ? "" : "s"} captured locally</span>
+            <button className="warning-button" onClick={handleClearFeedback} disabled={feedbackItems.length === 0} type="button">
+              Clear local feedback
+            </button>
+          </div>
+
+          <p className="brain-hint">
+            Feedback is stored on this device only. Export JSON/CSV before clearing browser data or sharing results.
+          </p>
+        </details>
 
         <details className="test-bank">
           <summary>MiniViktor test arena</summary>

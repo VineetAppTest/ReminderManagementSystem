@@ -1,0 +1,30 @@
+RemindIQ Beta - Tester Installation Guide
+
+Use this guide only after Vineet shares the RemindIQ beta link with you.
+
+Option A: Use without installing
+1. Open the RemindIQ beta link in Chrome or Edge on your phone.
+2. Wait for the app to load fully.
+3. Start testing by typing a reminder in the message box.
+
+Option B: Install to home screen on Android Chrome
+1. Open the RemindIQ beta link in Chrome.
+2. Tap the three-dot menu in the top-right corner.
+3. Tap "Add to Home screen" or "Install app".
+4. Keep the name as RemindIQ.
+5. Tap Install / Add.
+6. Open RemindIQ from your phone home screen.
+
+Option C: Install to home screen on iPhone Safari
+1. Open the RemindIQ beta link in Safari.
+2. Tap the Share button.
+3. Tap "Add to Home Screen".
+4. Keep the name as RemindIQ.
+5. Tap Add.
+6. Open RemindIQ from your phone home screen.
+
+Important notes
+- Voice and browser alerts work best after the app is opened through an HTTPS link.
+- If voice does not work, continue testing by typing reminders.
+- No login is required.
+- Do not share personal or sensitive information while testing.

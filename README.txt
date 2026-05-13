@@ -1,28 +1,28 @@
-RemindIQ Sprint 2E-G — MiniViktor Dataset Expansion
+RemindIQ Sprint 2H Fix 1 - One-Screen Beta Layout + Tester Guides
 
-Status:
-- Expands MiniViktor regression bank from 30 to 75 cases.
-- Retains Sprint 2E-D Retriever Brain and Sprint 2E-EF Simulation Lab + Dataset Export foundation.
-- No calendar integration in this build.
-- No UI beautification in this build.
+Purpose
+This build keeps Sprint 2H External Beta Feedback Mode and improves the beta testing experience.
 
-Expected validation:
-- MiniViktor Regression Report: Passed 75/75, Failed 0, Critical failed 0.
+Changes included
+1. More compact mobile layout.
+2. Page-level scrolling reduced/disabled so the tester can type without hunting for the input box.
+3. Header compressed for one-hand mobile use.
+4. Chat and saved reminders use internal scrolling instead of full-page scrolling.
+5. Beta feedback section is collapsed by default to reduce screen clutter.
+6. Added TESTER_INSTALLATION_GUIDE.txt.
+7. Added TESTER_TESTING_GUIDE.txt.
 
-Test order:
-1. Replace/add files from this ZIP.
-2. Run: npm.cmd run build
-3. Run: npm.cmd run preview -- --host 0.0.0.0
-4. In the app, run MiniViktor Regression Report.
-5. Confirm: Passed 75/75, Failed 0, Critical failed 0.
-6. Run Simulation Lab and Dataset Export checks.
+No calendar integration is included.
+No major MiniViktor logic change is intended in this build.
 
-Commit only if clean:
-git status
+Test before commit
+1. npm.cmd run build
+2. npm.cmd run preview -- --host 0.0.0.0
+3. Confirm app fits better on phone without needing page scroll to type.
+4. Confirm Report Issue still works.
+5. Confirm Export JSON/CSV still works.
+6. Confirm MiniViktor regression still passes.
+
+Commit message suggestion
 git add .
-git commit -m "Sprint 2E-G expand MiniViktor dataset to 75 cases"
-git tag v2e-g-75-case-regression-pass
-git status
-
-Hard rule:
-If local regression is not 75/75, do not commit and do not move to calendar integration.
+git commit -m "Sprint 2H one-screen beta layout and tester guides"
