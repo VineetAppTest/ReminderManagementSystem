@@ -15,6 +15,10 @@ import {
 import type { ChatMessage, LearningMemory, Reminder, ReminderCategory, ReminderDraft } from "./lib/reminderTypes";
 import { miniViktorReportToText, runMiniViktorRegressionArena } from "./brain/miniViktorRegressionArena";
 import type { MiniViktorRegressionReport } from "./brain/miniViktorRegressionArena";
+import { miniViktorSimulationReportToText, runMiniViktorSimulationLab } from "./brain/miniViktorSimulationLab";
+import type { MiniViktorSimulationReport } from "./brain/miniViktorSimulationLab";
+import { buildMiniViktorTrainingDataset, miniViktorDatasetToJson, miniViktorDatasetToJsonl } from "./brain/miniViktorDatasetExport";
+import type { MiniViktorDatasetExport } from "./brain/miniViktorDatasetExport";
 
 type NotificationState = NotificationPermission | "unsupported" | "https-needed";
 
@@ -126,6 +130,8 @@ function App() {
   const [editText, setEditText] = useState("");
   const [actionButtonsArmed, setActionButtonsArmed] = useState(false);
   const [brainReport, setBrainReport] = useState<MiniViktorRegressionReport | null>(null);
+  const [simulationReport, setSimulationReport] = useState<MiniViktorSimulationReport | null>(null);
+  const [datasetExport, setDatasetExport] = useState<MiniViktorDatasetExport | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -403,6 +409,47 @@ function App() {
     }
   }
 
+  function handleRunSimulationLab() {
+    const report = runMiniViktorSimulationLab();
+    setSimulationReport(report);
+  }
+
+  function handleCopySimulationReport() {
+    if (!simulationReport) return;
+    const text = miniViktorSimulationReportToText(simulationReport);
+    try {
+      navigator.clipboard?.writeText(text);
+      setVoiceMessage("MiniViktor simulation report copied.");
+    } catch {
+      setVoiceMessage("Could not copy automatically. Run the simulation report and review it on screen.");
+    }
+  }
+
+  function handleBuildDatasetExport() {
+    const exportData = buildMiniViktorTrainingDataset();
+    setDatasetExport(exportData);
+  }
+
+  function handleCopyDatasetJson() {
+    if (!datasetExport) return;
+    try {
+      navigator.clipboard?.writeText(miniViktorDatasetToJson(datasetExport));
+      setVoiceMessage("MiniViktor dataset JSON copied.");
+    } catch {
+      setVoiceMessage("Could not copy dataset JSON automatically.");
+    }
+  }
+
+  function handleCopyDatasetJsonl() {
+    if (!datasetExport) return;
+    try {
+      navigator.clipboard?.writeText(miniViktorDatasetToJsonl(datasetExport));
+      setVoiceMessage("MiniViktor dataset JSONL copied.");
+    } catch {
+      setVoiceMessage("Could not copy dataset JSONL automatically.");
+    }
+  }
+
   function handleVoiceInput() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -519,6 +566,8 @@ function App() {
               <span className="brand-name">RemindIQ</span>
               <span className="memory-pill">Local memory</span>
               <span className="memory-pill">Retriever brain</span>
+              <span className="memory-pill">Simulation lab</span>
+              <span className="memory-pill">Dataset export</span>
             </div>
             <p className="tagline">Natural reminders. Smarter follow-through.</p>
           </div>
@@ -729,6 +778,80 @@ function App() {
             <p className="brain-hint">Run this before calendar integration. Any critical failure blocks the next phase.</p>
           )}
 
+          <div className="brain-divider" />
+
+          <h3>Simulation learning lab</h3>
+          <div className="brain-actions">
+            <button className="primary-button" onClick={handleRunSimulationLab} type="button">
+              Run simulations
+            </button>
+
+            <button className="quiet-action-button" onClick={handleCopySimulationReport} disabled={!simulationReport} type="button">
+              Copy simulation report
+            </button>
+          </div>
+
+          {simulationReport ? (
+            <div className={simulationReport.criticalFailed > 0 ? "brain-report fail" : "brain-report pass"}>
+              <strong>MiniViktor Simulation Lab Report</strong>
+              <p>
+                Passed: {simulationReport.passed}/{simulationReport.total} · Failed: {simulationReport.failed} · Critical failed: {simulationReport.criticalFailed}
+              </p>
+              <div className="brain-category-grid">
+                {Object.entries(simulationReport.byCategory).map(([category, value]) => (
+                  <span key={category}>
+                    {category}: {value.total - value.failed}/{value.total}
+                  </span>
+                ))}
+              </div>
+              {simulationReport.results
+                .filter((result) => !result.passed)
+                .slice(0, 5)
+                .map((result) => (
+                  <div className="brain-failure" key={result.id}>
+                    <strong>{result.id}: {result.name}</strong>
+                    <ul>
+                      {result.failures.map((failure) => (
+                        <li key={failure}>{failure}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <p className="brain-hint">Run this to simulate multi-turn conversations before exporting training data.</p>
+          )}
+
+          <div className="brain-divider" />
+
+          <h3>Training dataset export</h3>
+          <div className="brain-actions">
+            <button className="primary-button" onClick={handleBuildDatasetExport} type="button">
+              Build dataset
+            </button>
+            <button className="quiet-action-button" onClick={handleCopyDatasetJson} disabled={!datasetExport} type="button">
+              Copy JSON
+            </button>
+            <button className="quiet-action-button" onClick={handleCopyDatasetJsonl} disabled={!datasetExport} type="button">
+              Copy JSONL
+            </button>
+          </div>
+
+          {datasetExport ? (
+            <div className={datasetExport.needsReview > 0 ? "brain-report fail" : "brain-report pass"}>
+              <strong>MiniViktor Dataset Export</strong>
+              <p>
+                Total: {datasetExport.total} · Clean: {datasetExport.clean} · Needs review: {datasetExport.needsReview}
+              </p>
+              <p className="brain-hint">Only clean examples should be used for future fine-tuning or AI-parser experiments.</p>
+            </div>
+          ) : (
+            <p className="brain-hint">Build this only after regression and simulation reports pass.</p>
+          )}
+
+          <div className="brain-divider" />
+
+          <h3>Current reminder test bank</h3>
           <ul>
             {getTestBank().map((test) => (
               <li key={test}>{test}</li>
