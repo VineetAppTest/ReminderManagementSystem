@@ -518,6 +518,7 @@ function App() {
             <div className="top-line">
               <span className="brand-name">RemindIQ</span>
               <span className="memory-pill">Local memory</span>
+              <span className="memory-pill">Retriever brain</span>
             </div>
             <p className="tagline">Natural reminders. Smarter follow-through.</p>
           </div>
