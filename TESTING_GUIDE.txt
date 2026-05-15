@@ -1,0 +1,48 @@
+RemindIQ Beta - Testing Guide
+
+Purpose of this test
+RemindIQ is being tested for natural reminder understanding. The goal is not to test calendar integration yet. Please test how well it understands reminders, follow-up questions, dates, times, multiple reminders, and corrections.
+
+How to test
+1. Open RemindIQ.
+2. Type or speak a reminder naturally.
+3. Answer RemindIQ's follow-up questions if it asks any.
+4. Confirm only if the reminder details look correct.
+5. If RemindIQ misunderstands anything, report it.
+6. Use End Test / Reset Chat before starting a new test scenario.
+
+Good examples to try
+- Meeting with boss tomorrow at 5 pm
+- Meet at 8, PM, tomorrow, earlier reminder today at 7 and tomorrow at 5
+- Lunch with X tomorrow, reminder at 12 and 1 as lunch is at 1.10
+- Team meeting at 5 pm, remind me half an hour before
+- Doctor appointment next Tuesday morning
+- Pay electricity bill Friday evening
+- Dinner at 9 pm Tuesday
+- Call mom tomorrow at 7
+- Reminder today at 10 pm and tomorrow at 7 pm
+- Use typos like tomrro, tomorro, tmrw, meetin
+
+When to report an issue
+Tap Report Issue if:
+- The date is wrong.
+- The time is wrong.
+- AM/PM was silently assumed.
+- It confused event time and reminder time.
+- It lost one of multiple reminders.
+- It saved too early.
+- It asked the same question again unnecessarily.
+- The app layout is hard to use.
+- Voice input fails.
+
+How to report
+1. Open the Beta feedback section.
+2. Enter your tester name or initials.
+3. Select the issue type.
+4. Add a short note, for example: "I said tomorrow 7, but it saved today 7."
+5. Tap Report Issue.
+6. Tap End Test / Reset Chat before trying the next case.
+7. Once the testing is complete pls export the JSON/CSV and share for further use.
+
+Success criteria
+The best feedback is specific. Please include what you typed/spoke, what RemindIQ did, and what you expected.
