@@ -980,3 +980,149 @@ textarea:focus,
     margin-bottom: 58px;
   }
 }
+
+/* Sprint 2H Fix 3: Saved Reminders + Feedback tabs
+   Feedback is no longer a floating overlay. It shares the right/bottom panel with saved reminders. */
+.side-panel-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.side-tab {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 950;
+}
+
+.side-tab span {
+  font-size: 13px;
+}
+
+.side-tab strong {
+  min-width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.side-tab.active {
+  background: linear-gradient(135deg, rgba(185, 138, 40, 0.94), rgba(242, 210, 123, 0.94));
+  color: #111827;
+  border-color: rgba(242, 210, 123, 0.7);
+}
+
+.side-tab.active strong {
+  background: rgba(17, 24, 39, 0.14);
+  color: #111827;
+}
+
+.side-panel-body {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.compact-list-header {
+  margin-bottom: 8px;
+}
+
+.feedback-panel-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+.inline-feedback {
+  margin-top: 0;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inline-feedback .feedback-note {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.inline-feedback .beta-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Override the old mobile floating feedback emergency style. */
+@media (max-width: 720px) {
+  .side-panel-tabs {
+    gap: 6px;
+    margin-bottom: 7px;
+  }
+
+  .side-tab {
+    border-radius: 13px;
+    padding: 8px 9px;
+  }
+
+  .side-tab span {
+    font-size: 11px;
+  }
+
+  .side-tab strong {
+    min-width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .side-panel-body {
+    min-height: 0;
+  }
+
+  .beta-feedback.inline-feedback,
+  .beta-feedback.inline-feedback[open] {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    max-height: none;
+    margin: 0;
+    overflow-y: auto;
+    padding: 8px;
+    border-radius: 14px;
+    box-shadow: none;
+    background: rgba(15, 23, 42, 0.38);
+  }
+
+  .inline-feedback .beta-grid,
+  .inline-feedback .beta-actions,
+  .inline-feedback .beta-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .inline-feedback textarea.feedback-note {
+    min-height: 78px;
+    max-height: 120px;
+    margin-top: 7px;
+  }
+
+  .inline-feedback button {
+    width: 100%;
+  }
+
+  .test-bank {
+    margin-bottom: 0;
+  }
+}

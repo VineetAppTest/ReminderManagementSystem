@@ -174,6 +174,7 @@ function App() {
   const [issueType, setIssueType] = useState<FeedbackIssueType>("Did not understand");
   const [feedbackComment, setFeedbackComment] = useState("");
   const [feedbackItems, setFeedbackItems] = useState<BetaFeedbackItem[]>([]);
+  const [sidePanel, setSidePanel] = useState<"reminders" | "feedback">("reminders");
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -795,146 +796,180 @@ function App() {
       </section>
 
       <section className="list-card">
-        <div className="list-header">
-          <div>
-            <h2>Saved reminders</h2>
-            <p>{activeCount} active · {doneCount} done</p>
-          </div>
-          <span>{filteredReminders.length}</span>
+        <div className="side-panel-tabs">
+          <button
+            className={sidePanel === "reminders" ? "side-tab active" : "side-tab"}
+            onClick={() => setSidePanel("reminders")}
+            type="button"
+          >
+            <span>Saved reminders</span>
+            <strong>{filteredReminders.length}</strong>
+          </button>
+
+          <button
+            className={sidePanel === "feedback" ? "side-tab active" : "side-tab"}
+            onClick={() => setSidePanel("feedback")}
+            type="button"
+          >
+            <span>Feedback</span>
+            <strong>{feedbackItems.length}</strong>
+          </button>
         </div>
 
-        <input
-          className="search-box"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search reminders..."
-        />
+        {sidePanel === "reminders" && (
+          <div className="side-panel-body reminders-panel-body">
+            <div className="list-header compact-list-header">
+              <div>
+                <h2>Saved reminders</h2>
+                <p>{activeCount} active · {doneCount} done</p>
+              </div>
+              <span>{filteredReminders.length}</span>
+            </div>
 
-        <div className="filter-wrap">
-          {FILTERS.map((filter) => (
-            <button
-              key={filter}
-              className={activeFilter === filter ? "filter-chip active" : "filter-chip"}
-              onClick={() => setActiveFilter(filter)}
-              type="button"
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
+            <input
+              className="search-box"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search reminders..."
+            />
 
-        <div className="reminder-list">
-          {filteredReminders.length === 0 ? (
-            <div className="empty-state">No reminders in this view.</div>
-          ) : (
-            filteredReminders.map((item) => (
-              <article key={item.id} className={item.status === "done" ? "reminder-item done-item" : "reminder-item"}>
-                <div className="reminder-main">
-                  <div className="status-line">
-                    <span className={`status-dot ${item.status === "done" ? "done" : item.status === "confirmed" ? "confirmed" : "warning"}`} />
-                    <small>{item.status === "done" ? "Done" : item.status === "confirmed" ? "Confirmed" : "Needs info"}</small>
-                    <span className={`category-chip category-${item.category.toLowerCase()}`}>{item.category}</span>
-                  </div>
+            <div className="filter-wrap">
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter}
+                  className={activeFilter === filter ? "filter-chip active" : "filter-chip"}
+                  onClick={() => setActiveFilter(filter)}
+                  type="button"
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
 
-                  {editingId === item.id ? (
-                    <div className="edit-box">
-                      <textarea value={editText} onChange={(event) => setEditText(event.target.value)} rows={3} />
-                      <div className="edit-actions">
-                        <button className="done-button" onClick={() => handleSaveEdit(item.id)} type="button">
-                          Save Edit
+            <div className="reminder-list">
+              {filteredReminders.length === 0 ? (
+                <div className="empty-state">No reminders in this view.</div>
+              ) : (
+                filteredReminders.map((item) => (
+                  <article key={item.id} className={item.status === "done" ? "reminder-item done-item" : "reminder-item"}>
+                    <div className="reminder-main">
+                      <div className="status-line">
+                        <span className={`status-dot ${item.status === "done" ? "done" : item.status === "confirmed" ? "confirmed" : "warning"}`} />
+                        <small>{item.status === "done" ? "Done" : item.status === "confirmed" ? "Confirmed" : "Needs info"}</small>
+                        <span className={`category-chip category-${item.category.toLowerCase()}`}>{item.category}</span>
+                      </div>
+
+                      {editingId === item.id ? (
+                        <div className="edit-box">
+                          <textarea value={editText} onChange={(event) => setEditText(event.target.value)} rows={3} />
+                          <div className="edit-actions">
+                            <button className="done-button" onClick={() => handleSaveEdit(item.id)} type="button">
+                              Save Edit
+                            </button>
+                            <button className="quiet-button" onClick={handleCancelEdit} type="button">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <h3>{item.title}</h3>
+                          <p>Reminder: {item.dateText} · {item.timeText}</p>
+                          {item.eventTimeText && <p className="event-line">Event: {item.eventDateText || item.dateText} · {item.eventTimeText}</p>}
+                        </>
+                      )}
+                    </div>
+
+                    {editingId !== item.id && (
+                      <div className="item-actions">
+                        <button className="done-button" onClick={() => handleMarkDone(item.id)} type="button">
+                          {item.status === "done" ? "Restore" : "Done"}
                         </button>
-                        <button className="quiet-button" onClick={handleCancelEdit} type="button">
-                          Cancel
+                        <button className="quiet-button" onClick={() => handleStartEdit(item)} type="button">
+                          Edit
+                        </button>
+                        <button className="warning-button" onClick={() => handleDelete(item.id)} type="button">
+                          Delete
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h3>{item.title}</h3>
-                      <p>Reminder: {item.dateText} · {item.timeText}</p>
-                      {item.eventTimeText && <p className="event-line">Event: {item.eventDateText || item.dateText} · {item.eventTimeText}</p>}
-                    </>
-                  )}
-                </div>
+                    )}
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
-                {editingId !== item.id && (
-                  <div className="item-actions">
-                    <button className="done-button" onClick={() => handleMarkDone(item.id)} type="button">
-                      {item.status === "done" ? "Restore" : "Done"}
-                    </button>
-                    <button className="quiet-button" onClick={() => handleStartEdit(item)} type="button">
-                      Edit
-                    </button>
-                    <button className="warning-button" onClick={() => handleDelete(item.id)} type="button">
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </article>
-            ))
-          )}
-        </div>
+        {sidePanel === "feedback" && (
+          <div className="side-panel-body feedback-panel-body">
+            <div className="list-header compact-list-header">
+              <div>
+                <h2>Feedback</h2>
+                <p>Report issues during beta testing</p>
+              </div>
+              <span>{feedbackItems.length}</span>
+            </div>
 
-        <details className="beta-feedback">
-          <summary>Beta feedback mode</summary>
+            <div className="beta-feedback inline-feedback">
+              <div className="beta-grid">
+                <label>
+                  <span>Tester ID</span>
+                  <input
+                    className="search-box"
+                    value={testerId}
+                    onChange={(event) => setTesterId(event.target.value)}
+                    placeholder="Optional, e.g. tester-01"
+                  />
+                </label>
 
-          <div className="beta-grid">
-            <label>
-              <span>Tester ID</span>
-              <input
-                className="search-box"
-                value={testerId}
-                onChange={(event) => setTesterId(event.target.value)}
-                placeholder="Optional, e.g. tester-01"
+                <label>
+                  <span>Issue type</span>
+                  <select className="search-box" value={issueType} onChange={(event) => setIssueType(event.target.value as FeedbackIssueType)}>
+                    {FEEDBACK_ISSUE_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <textarea
+                className="feedback-note"
+                value={feedbackComment}
+                onChange={(event) => setFeedbackComment(event.target.value)}
+                placeholder="Optional comment: what went wrong or what you expected"
+                rows={3}
               />
-            </label>
 
-            <label>
-              <span>Issue type</span>
-              <select className="search-box" value={issueType} onChange={(event) => setIssueType(event.target.value as FeedbackIssueType)}>
-                {FEEDBACK_ISSUE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <div className="brain-actions beta-actions">
+                <button className="danger-action-button" onClick={handleReportIssue} type="button">
+                  Report issue
+                </button>
+                <button className="quiet-action-button" onClick={handleEndTest} type="button">
+                  End test / reset chat
+                </button>
+                <button className="quiet-action-button" onClick={handleExportFeedbackJson} disabled={feedbackItems.length === 0} type="button">
+                  Export JSON
+                </button>
+                <button className="quiet-action-button" onClick={handleExportFeedbackCsv} disabled={feedbackItems.length === 0} type="button">
+                  Export CSV
+                </button>
+              </div>
+
+              <div className="beta-footer">
+                <span>{feedbackItems.length} issue{feedbackItems.length === 1 ? "" : "s"} captured locally</span>
+                <button className="warning-button" onClick={handleClearFeedback} disabled={feedbackItems.length === 0} type="button">
+                  Clear local feedback
+                </button>
+              </div>
+
+              <p className="brain-hint">
+                Feedback is stored on this device only. Export JSON/CSV before clearing browser data or sharing results.
+              </p>
+            </div>
           </div>
-
-          <textarea
-            className="feedback-note"
-            value={feedbackComment}
-            onChange={(event) => setFeedbackComment(event.target.value)}
-            placeholder="Optional comment: what went wrong or what you expected"
-            rows={3}
-          />
-
-          <div className="brain-actions beta-actions">
-            <button className="danger-action-button" onClick={handleReportIssue} type="button">
-              Report issue
-            </button>
-            <button className="quiet-action-button" onClick={handleEndTest} type="button">
-              End test / reset chat
-            </button>
-            <button className="quiet-action-button" onClick={handleExportFeedbackJson} disabled={feedbackItems.length === 0} type="button">
-              Export JSON
-            </button>
-            <button className="quiet-action-button" onClick={handleExportFeedbackCsv} disabled={feedbackItems.length === 0} type="button">
-              Export CSV
-            </button>
-          </div>
-
-          <div className="beta-footer">
-            <span>{feedbackItems.length} issue{feedbackItems.length === 1 ? "" : "s"} captured locally</span>
-            <button className="warning-button" onClick={handleClearFeedback} disabled={feedbackItems.length === 0} type="button">
-              Clear local feedback
-            </button>
-          </div>
-
-          <p className="brain-hint">
-            Feedback is stored on this device only. Export JSON/CSV before clearing browser data or sharing results.
-          </p>
-        </details>
+        )}
 
         <details className="test-bank">
           <summary>MiniViktor test arena</summary>
