@@ -1126,3 +1126,204 @@ textarea:focus,
     margin-bottom: 0;
   }
 }
+
+/* Sprint 2H Fix 4: compact feedback-first tab layout
+   Goal: make feedback reachable and usable on one mobile screen. */
+.feedback-panel-body .compact-list-header {
+  margin-bottom: 6px;
+}
+
+.feedback-panel-body .compact-list-header h2 {
+  font-size: 20px;
+}
+
+.feedback-panel-body .compact-list-header p {
+  font-size: 12px;
+}
+
+.inline-feedback .beta-grid {
+  margin-top: 8px;
+}
+
+.inline-feedback .beta-grid label span {
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.inline-feedback .feedback-note {
+  min-height: 58px;
+  max-height: 86px;
+}
+
+.inline-feedback .beta-footer {
+  margin-top: 7px;
+  font-size: 11px;
+}
+
+.inline-feedback .brain-hint {
+  margin: 7px 0 0;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    grid-template-rows: minmax(0, 52fr) minmax(0, 48fr);
+  }
+
+  .conversation-shell,
+  .list-card {
+    padding: 7px;
+  }
+
+  .brand-name {
+    font-size: 20px;
+  }
+
+  .tagline {
+    font-size: 10px;
+  }
+
+  .status-stack {
+    padding: 5px 6px;
+    font-size: 9px;
+    min-width: 86px;
+  }
+
+  .utility-row {
+    margin: 4px 0;
+  }
+
+  .secondary-button.compact {
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+
+  .composer {
+    padding: 6px;
+  }
+
+  .composer textarea {
+    min-height: 36px;
+    max-height: 44px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .composer-actions {
+    margin-top: 5px;
+    gap: 5px;
+  }
+
+  .composer-actions .primary-button,
+  .composer-actions .secondary-button {
+    padding: 7px 8px;
+    font-size: 11px;
+    border-radius: 11px;
+  }
+
+  .side-panel-tabs {
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+
+  .side-tab {
+    padding: 6px 7px;
+    border-radius: 11px;
+  }
+
+  .side-tab span {
+    font-size: 10.5px;
+  }
+
+  .side-tab strong {
+    min-width: 20px;
+    height: 20px;
+    font-size: 9px;
+  }
+
+  .feedback-panel-body .compact-list-header {
+    display: none;
+  }
+
+  .beta-feedback.inline-feedback,
+  .beta-feedback.inline-feedback[open] {
+    padding: 6px;
+  }
+
+  .inline-feedback .beta-grid {
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 6px;
+    margin-top: 0;
+  }
+
+  .inline-feedback .beta-grid label span {
+    font-size: 9.5px;
+    margin-bottom: 3px;
+  }
+
+  .inline-feedback .search-box {
+    padding: 6px 7px;
+    font-size: 10.5px;
+    border-radius: 10px;
+    margin-bottom: 0;
+  }
+
+  .inline-feedback textarea.feedback-note {
+    min-height: 52px;
+    max-height: 66px;
+    margin-top: 6px;
+    padding: 7px 8px;
+    font-size: 11px;
+    border-radius: 11px;
+  }
+
+  .inline-feedback .beta-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin: 6px 0;
+  }
+
+  .inline-feedback button,
+  .inline-feedback .beta-actions button,
+  .inline-feedback .beta-footer button {
+    width: 100%;
+    padding: 7px 8px;
+    font-size: 10.5px;
+    border-radius: 10px;
+  }
+
+  .inline-feedback .beta-footer {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    font-size: 9.5px;
+  }
+
+  .inline-feedback .brain-hint {
+    display: none;
+  }
+
+  .reminders-panel-body .compact-list-header {
+    display: none;
+  }
+
+  .filter-wrap {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+
+  .filter-chip {
+    padding: 4px 3px;
+    font-size: 9px;
+  }
+
+  .reminder-list {
+    max-height: none;
+    flex: 1;
+    overflow-y: auto;
+  }
+}

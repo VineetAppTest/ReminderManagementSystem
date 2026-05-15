@@ -798,21 +798,21 @@ function App() {
       <section className="list-card">
         <div className="side-panel-tabs">
           <button
-            className={sidePanel === "reminders" ? "side-tab active" : "side-tab"}
-            onClick={() => setSidePanel("reminders")}
-            type="button"
-          >
-            <span>Saved reminders</span>
-            <strong>{filteredReminders.length}</strong>
-          </button>
-
-          <button
             className={sidePanel === "feedback" ? "side-tab active" : "side-tab"}
             onClick={() => setSidePanel("feedback")}
             type="button"
           >
             <span>Feedback</span>
             <strong>{feedbackItems.length}</strong>
+          </button>
+
+          <button
+            className={sidePanel === "reminders" ? "side-tab active" : "side-tab"}
+            onClick={() => setSidePanel("reminders")}
+            type="button"
+          >
+            <span>Saved reminders</span>
+            <strong>{filteredReminders.length}</strong>
           </button>
         </div>
 
@@ -939,7 +939,7 @@ function App() {
                 value={feedbackComment}
                 onChange={(event) => setFeedbackComment(event.target.value)}
                 placeholder="Optional comment: what went wrong or what you expected"
-                rows={3}
+                rows={2}
               />
 
               <div className="brain-actions beta-actions">
