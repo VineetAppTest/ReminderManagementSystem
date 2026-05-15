@@ -1327,3 +1327,50 @@ textarea:focus,
     overflow-y: auto;
   }
 }
+
+/* Sprint 2H Fix 5: mobile input zoom fix
+   Mobile browsers can auto-zoom when focused controls use small text.
+   Keep input/select/textarea text at 16px on phones and regain compactness through spacing. */
+@media (max-width: 720px) {
+  input,
+  select,
+  textarea,
+  .search-box,
+  .composer textarea,
+  .inline-feedback .search-box,
+  .inline-feedback textarea.feedback-note {
+    font-size: 16px !important;
+  }
+
+  .composer textarea {
+    min-height: 40px;
+    max-height: 48px;
+    padding: 8px 10px;
+    line-height: 1.25;
+  }
+
+  .inline-feedback .search-box {
+    min-height: 36px;
+    padding: 6px 8px;
+    line-height: 1.15;
+  }
+
+  .inline-feedback textarea.feedback-note {
+    min-height: 54px;
+    max-height: 70px;
+    padding: 7px 9px;
+    line-height: 1.25;
+  }
+
+  .inline-feedback .beta-grid label span {
+    font-size: 10px;
+  }
+
+  .composer-actions .primary-button,
+  .composer-actions .secondary-button,
+  .inline-feedback button,
+  .inline-feedback .beta-actions button,
+  .inline-feedback .beta-footer button {
+    min-height: 34px;
+  }
+}
