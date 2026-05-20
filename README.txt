@@ -1,19 +1,21 @@
-RemindIQ Sprint 2H Fix 5 — Mobile Input Zoom Fix
+RemindIQ Sprint 2H Fix 6 — Mobile Voice Permission + Capture Fix
 
-Purpose:
-- Prevent mobile browser auto-zoom when testers tap feedback inputs, comments, dropdowns, or the main message box.
-- Keep the compact feedback-first tab layout from Sprint 2H Fix 4.
-- Keep Saved Reminders + Feedback tabs unchanged.
+What this build changes:
+1. Adds a stricter HTTPS check before voice starts.
+2. Requests microphone permission explicitly before starting SpeechRecognition.
+3. Provides clearer mobile voice error messages.
+4. Adds a silence timeout so testers do not get stuck in listening mode.
+5. Keeps typing, feedback tabs, JSON/CSV export, and MiniViktor brain files intact.
 
 Important:
-- This does not disable user zoom globally. It fixes browser auto-zoom by keeping focused controls at mobile-safe font sizing.
+- Mobile voice should be tested only on the deployed HTTPS Vercel link.
+- Local Wi-Fi URLs such as http://192.168.x.x may still fail for voice on phones.
+- If the browser does not support Web Speech Recognition, testers should use the phone keyboard mic as fallback.
 
-Test checklist:
-1. Run: npm.cmd run build
-2. Run: npm.cmd run preview -- --host 0.0.0.0
-3. On mobile, open the app.
-4. Tap Feedback tab.
-5. Tap Tester ID, Issue Type, and Optional Comments.
-6. Screen should not zoom in/out repeatedly.
-7. Report Issue, End Test, Export JSON, and Export CSV should remain usable.
-8. Run MiniViktor regression and confirm it still passes.
+Test:
+1. npm.cmd run build
+2. npm.cmd run preview -- --host 0.0.0.0
+3. Deploy/push to Vercel for real mobile voice test.
+4. On phone, open the HTTPS Vercel link.
+5. Allow microphone permission.
+6. Tap Speak and speak immediately.
