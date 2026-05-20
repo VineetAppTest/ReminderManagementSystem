@@ -1,4 +1,4 @@
-const CACHE_NAME = "remindiq-stabilisation-reset-v1";
+const CACHE_NAME = "remindiq-2h-fix7-voice-direct-start-v1";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

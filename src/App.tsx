@@ -593,7 +593,7 @@ function App() {
     setVoiceMessage("Local beta feedback cleared.");
   }
 
-  async function handleVoiceInput() {
+  function handleVoiceInput() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     const isSecureEnough = window.location.protocol === "https:" || isLocalhost;
@@ -610,23 +610,6 @@ function App() {
 
     if (isListening) return;
 
-    try {
-      if (navigator.mediaDevices?.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    } catch (error: any) {
-      const name = error?.name || "microphone-error";
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        setVoiceMessage("Microphone permission is blocked. Allow microphone access for this site, then tap Speak again.");
-      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        setVoiceMessage("No microphone was found on this device.");
-      } else {
-        setVoiceMessage("Microphone could not be started. Check browser microphone permission and try again.");
-      }
-      return;
-    }
-
     const recognition = new SpeechRecognition();
     recognition.lang = "en-IN";
     recognition.interimResults = false;
@@ -642,64 +625,66 @@ function App() {
       setIsListening(false);
     };
 
-    try {
-      setIsListening(true);
-      setVoiceMessage("Listening... speak now.");
+    setIsListening(true);
+    setVoiceMessage("Listening... speak now.");
 
-      silenceTimer = window.setTimeout(() => {
-        if (!handledResult && !handledError) {
-          handledError = true;
-          try {
-            recognition.stop();
-          } catch {
-            // Ignore stop failures from browser speech engine.
-          }
-          cleanup();
-          setVoiceMessage("I did not hear anything. Tap Speak and start talking immediately.");
-        }
-      }, 9000);
-
-      recognition.onresult = (event: any) => {
-        handledResult = true;
-        cleanup();
-
-        const spokenText = event.results?.[0]?.[0]?.transcript || "";
-        if (!spokenText.trim()) {
-          setVoiceMessage("I did not catch that. Please try again.");
-          return;
-        }
-
-        setInput("");
-        setVoiceMessage(`Voice captured: ${spokenText}`);
-        processText(spokenText);
-      };
-
-      recognition.onerror = (event: any) => {
+    silenceTimer = window.setTimeout(() => {
+      if (!handledResult && !handledError) {
         handledError = true;
+        try {
+          recognition.stop();
+        } catch {
+          // Ignore stop failures from browser speech engine.
+        }
         cleanup();
+        setVoiceMessage("I did not hear anything. Tap Speak and start talking immediately.");
+      }
+    }, 9000);
 
-        const error = event?.error || "unknown";
-        if (error === "not-allowed" || error === "service-not-allowed") {
-          setVoiceMessage("Microphone permission is blocked. Allow microphone access in browser settings.");
-        } else if (error === "no-speech") {
-          setVoiceMessage("No speech was detected. Tap Speak and start talking immediately.");
-        } else if (error === "audio-capture") {
-          setVoiceMessage("Microphone is not available. Close other apps using the mic and try again.");
-        } else if (error === "network") {
-          setVoiceMessage("Voice service failed on this browser. Try Chrome/Edge over HTTPS, or use the keyboard mic.");
-        } else if (error === "aborted") {
-          setVoiceMessage("Voice capture stopped. Tap Speak to try again.");
-        } else {
-          setVoiceMessage(`Voice capture failed: ${error}. Try Chrome/Edge over HTTPS, or use the keyboard mic.`);
-        }
-      };
+    recognition.onresult = (event: any) => {
+      handledResult = true;
+      cleanup();
 
-      recognition.onend = () => {
-        if (!handledResult && !handledError) {
-          cleanup();
-        }
-      };
+      const spokenText = event.results?.[0]?.[0]?.transcript || "";
+      if (!spokenText.trim()) {
+        setVoiceMessage("I did not catch that. Please try again.");
+        return;
+      }
 
+      setInput("");
+      setVoiceMessage(`Voice captured: ${spokenText}`);
+      processText(spokenText);
+    };
+
+    recognition.onerror = (event: any) => {
+      handledError = true;
+      cleanup();
+
+      const error = event?.error || "unknown";
+      if (error === "not-allowed" || error === "service-not-allowed") {
+        setVoiceMessage(
+          "Voice permission was blocked by the browser speech service. Open the HTTPS link in Chrome, allow Microphone for this site, then tap Speak again. If it still fails, use the phone keyboard mic."
+        );
+      } else if (error === "no-speech") {
+        setVoiceMessage("No speech was detected. Tap Speak and start talking immediately.");
+      } else if (error === "audio-capture") {
+        setVoiceMessage("Microphone is not available. Close other apps using the mic and try again.");
+      } else if (error === "network") {
+        setVoiceMessage("Voice service failed on this browser. Try Chrome/Edge over HTTPS, or use the keyboard mic.");
+      } else if (error === "aborted") {
+        setVoiceMessage("Voice capture stopped. Tap Speak to try again.");
+      } else {
+        setVoiceMessage(`Voice capture failed: ${error}. Try Chrome/Edge over HTTPS, or use the keyboard mic.`);
+      }
+    };
+
+    recognition.onend = () => {
+      if (!handledResult && !handledError) {
+        cleanup();
+      }
+    };
+
+    try {
       recognition.start();
     } catch (error: any) {
       cleanup();
