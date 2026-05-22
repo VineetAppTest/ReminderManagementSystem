@@ -1,0 +1,33 @@
+RemindIQ B1 Voice Build - Consolidated Update
+
+What changed:
+1. Fixed an existing TypeScript regression in src/App.tsx where handledError was declared twice inside handleVoiceInput.
+2. Upgraded push-to-talk voice capture:
+   - Tap to Speak button
+   - interim transcript display
+   - HTTPS/browser support checks
+   - safer error handling for microphone permission, no speech, audio capture, network, and aborted events
+3. Added MiniViktor spoken responses using browser speechSynthesis.
+4. Added MiniViktor In-App Listening Mode:
+   - Start Listening Mode
+   - Wake phrases: MiniViktor, Mini Victor, RemindIQ
+   - Assistant says: Yes, what should I remind you about?
+   - Captures the next spoken reminder and sends it to the existing reminder brain
+5. Preserved the existing RemindIQ reminder engine, feedback tab, regression arena, simulation lab, local storage, and notification flow.
+6. Added compact styling for the listening mode card in src/App.css.
+7. Production build tested successfully with npm run build.
+
+Recommended test flow:
+1. Upload this project to GitHub/Vercel.
+2. Open the deployed HTTPS link in Android Chrome.
+3. Tap Enable Notifications.
+4. Test Tap to Speak with: Remind me to drink water in 2 minutes.
+5. Test Listening Mode:
+   - Tap Start Listening Mode
+   - Say MiniViktor
+   - Wait for the spoken response
+   - Say: Call Amit tomorrow at 7 PM
+6. Confirm the reminder appears and fires.
+
+Known limitation:
+In-app listening mode works while the app/browser is open. It is not yet a true dormant Alexa/Siri-style background wake-word system.
