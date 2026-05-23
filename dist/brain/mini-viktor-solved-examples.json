@@ -1,0 +1,66 @@
+{
+  "version": "2E-D",
+  "purpose": "MiniViktor solved-example retriever brain",
+  "examples": [
+    {
+      "id": "mv-ex-001",
+      "category": "visible_inference",
+      "pattern": "earlier reminder today at 7 and tomorrow at 6",
+      "summary": "Event tomorrow 8 PM; ask visible inference confirmation for today 7 PM and tomorrow 6 PM."
+    },
+    {
+      "id": "mv-ex-002",
+      "category": "candidate_compliance",
+      "pattern": "3 n 7",
+      "summary": "Preserve two bare candidate alerts before evening event."
+    },
+    {
+      "id": "mv-ex-003",
+      "category": "multiple_dates",
+      "pattern": "1st reminder today at 3 and 2nd reminder tomorrow at 7",
+      "summary": "Keep both dated reminder alerts."
+    },
+    {
+      "id": "mv-ex-004",
+      "category": "event_vs_reminder",
+      "pattern": "tomorrow however need a reminder at 4",
+      "summary": "Preserve event tomorrow 6 PM and reminder tomorrow 4 PM."
+    },
+    {
+      "id": "mv-ex-005",
+      "category": "before_event",
+      "pattern": "half an hour before",
+      "summary": "Reminder time is event time minus 30 minutes."
+    },
+    {
+      "id": "mv-ex-006",
+      "category": "event_vs_reminder",
+      "pattern": "reminder at 12 and then at 1 as lunch is at 1.10",
+      "summary": "Event tomorrow 1:10 PM and alerts tomorrow 12 PM and 1 PM."
+    },
+    {
+      "id": "mv-ex-007",
+      "category": "date_typo",
+      "pattern": "tomorro",
+      "summary": "Normalize tomorro to tomorrow."
+    },
+    {
+      "id": "mv-ex-008",
+      "category": "weekday",
+      "pattern": "Tuesday",
+      "summary": "Use next Tuesday as the date follow-up."
+    },
+    {
+      "id": "mv-ex-009",
+      "category": "multiple_dates",
+      "pattern": "today - 6 n tomorro - 4",
+      "summary": "Event tomorrow 8 PM; alerts today 6 PM and tomorrow 4 PM."
+    },
+    {
+      "id": "mv-ex-010",
+      "category": "candidate_compliance",
+      "pattern": "6pm n then 6.30",
+      "summary": "Inherit PM to second alert."
+    }
+  ]
+}
