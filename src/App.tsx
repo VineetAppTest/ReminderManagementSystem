@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import "./App.css";
 import {
   DEFAULT_LEARNING_MEMORY,
@@ -21,8 +22,6 @@ import { buildMiniViktorTrainingDataset, miniViktorDatasetToJson, miniViktorData
 import type { MiniViktorDatasetExport } from "./brain/miniViktorDatasetExport";
 
 type NotificationState = NotificationPermission | "unsupported" | "https-needed";
-
-type ListeningModeState = "off" | "waiting_for_wake_word" | "capturing_reminder";
 
 type FeedbackIssueType =
   | "Did not understand"
@@ -66,6 +65,8 @@ declare global {
     webkitSpeechRecognition?: any;
   }
 }
+
+const NativeSpeechRecognition = registerPlugin<any>("SpeechRecognition");
 
 const REMINDERS_KEY = "remindiq_reminders_v2d_stable";
 const DRAFT_KEY = "remindiq_active_draft_v2d_stable";
@@ -164,9 +165,6 @@ function App() {
   const [notificationState, setNotificationState] = useState<NotificationState>("unsupported");
   const [voiceMessage, setVoiceMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const [listeningMode, setListeningMode] = useState<ListeningModeState>("off");
-  const [interimTranscript, setInterimTranscript] = useState("");
-  const [lastHeard, setLastHeard] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -182,8 +180,6 @@ function App() {
   const [sidePanel, setSidePanel] = useState<"reminders" | "feedback">("reminders");
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
-  const listeningRecognitionRef = useRef<any>(null);
-  const listeningModeRef = useRef<ListeningModeState>("off");
 
   useEffect(() => {
     const isHttps = window.location.protocol === "https:" || window.location.hostname === "localhost";
@@ -231,16 +227,6 @@ function App() {
     } catch {
       // Ignore corrupted local state
     }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      try {
-        listeningRecognitionRef.current?.stop?.();
-      } catch {
-        // Ignore browser speech cleanup errors.
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -368,60 +354,6 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [readyToSave, draft?.id, draft?.alerts.length]);
 
-  function canUseVoice() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    const isSecureEnough = window.location.protocol === "https:" || isLocalhost;
-
-    if (!isSecureEnough) {
-      return { ok: false, SpeechRecognition, message: "Voice needs HTTPS on phones. Open the deployed Vercel link, not the local Wi-Fi link." };
-    }
-
-    if (!SpeechRecognition) {
-      return { ok: false, SpeechRecognition, message: "Voice input is not supported in this browser. Use Chrome/Edge, or use the phone keyboard mic." };
-    }
-
-    return { ok: true, SpeechRecognition, message: "" };
-  }
-
-  function speakText(text: string) {
-    if (!("speechSynthesis" in window) || !text.trim()) return;
-
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-IN";
-      utterance.rate = 0.95;
-      utterance.pitch = 1;
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      // Spoken response is helpful, but the app should never fail because of it.
-    }
-  }
-
-  function setListeningModeSafely(nextMode: ListeningModeState) {
-    listeningModeRef.current = nextMode;
-    setListeningMode(nextMode);
-  }
-
-  function normalizeSpeechText(text: string) {
-    return text.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-  }
-
-  function extractCommandAfterWakeWord(text: string) {
-    const normalized = normalizeSpeechText(text);
-    const wakeWords = ["mini viktor", "mini victor", "miniviktor", "minivictor", "remind iq", "remindiq"];
-    const matchedWakeWord = wakeWords.find((word) => normalized.includes(word));
-
-    if (!matchedWakeWord) {
-      return { wakeDetected: false, commandText: "" };
-    }
-
-    const wakeIndex = normalized.indexOf(matchedWakeWord);
-    const commandText = normalized.slice(wakeIndex + matchedWakeWord.length).trim();
-    return { wakeDetected: true, commandText };
-  }
-
   async function requestNotifications() {
     const isHttps = window.location.protocol === "https:" || window.location.hostname === "localhost";
 
@@ -447,14 +379,12 @@ function App() {
 
     if (result.reminders.length === 0) {
       setMessages((prev) => addMessageToList(prev, "assistant", result.assistantText));
-      speakText(result.assistantText);
       return;
     }
 
     setReminders((prev) => [...result.reminders, ...prev]);
     setLearning((prev) => updateLearningMemory(prev, result.reminders));
     setMessages((prev) => addMessageToList(prev, "assistant", result.assistantText));
-    speakText(result.assistantText);
     setDraft(null);
   }
 
@@ -471,25 +401,22 @@ function App() {
 
     if (draft && isCancelIntent(cleanText)) {
       setDraft(null);
-      const assistantText = "No problem — I won’t save it. Tell me the next reminder when ready.";
-      setMessages((prev) => addMessageToList(prev, "assistant", assistantText));
-      speakText(assistantText);
+      setMessages((prev) =>
+        addMessageToList(prev, "assistant", "No problem — I won’t save it. Tell me the next reminder when ready.")
+      );
       return;
     }
 
     if (draft && readyToSave && isChangeIntent(cleanText)) {
       setInput(draft.rawText || draft.task);
       setDraft(null);
-      const assistantText = "Sure — make the change and send it again.";
-      setMessages((prev) => addMessageToList(prev, "assistant", assistantText));
-      speakText(assistantText);
+      setMessages((prev) => addMessageToList(prev, "assistant", "Sure — make the change and send it again."));
       return;
     }
 
     const result = processUserText(draft, cleanText, learning);
     setDraft(result.draft);
     setMessages((prev) => addMessageToList(prev, "assistant", result.assistantText));
-    speakText(result.assistantText);
   }
 
   function handleSend() {
@@ -517,17 +444,15 @@ function App() {
     if (!draft) return;
     setInput(draft.rawText || draft.task);
     setDraft(null);
-    const assistantText = "Sure — make the change and send it again.";
-    setMessages((prev) => addMessageToList(prev, "assistant", assistantText));
-    speakText(assistantText);
+    setMessages((prev) => addMessageToList(prev, "assistant", "Sure — make the change and send it again."));
   }
 
   function handleDropClick() {
     if (!actionButtonsArmed) return;
     setDraft(null);
-    const assistantText = "No problem — I won’t save it. Tell me the next reminder when ready.";
-    setMessages((prev) => addMessageToList(prev, "assistant", assistantText));
-    speakText(assistantText);
+    setMessages((prev) =>
+      addMessageToList(prev, "assistant", "No problem — I won’t save it. Tell me the next reminder when ready.")
+    );
   }
 
 
@@ -671,19 +596,96 @@ function App() {
     setVoiceMessage("Local beta feedback cleared.");
   }
 
-  function handleVoiceInput() {
-    const voiceSupport = canUseVoice();
+  function extractNativeTranscript(result: any) {
+    const candidates = [
+      result?.matches?.[0],
+      result?.matches?.[0]?.text,
+      result?.matches?.[0]?.transcript,
+      result?.result,
+      result?.text,
+      result?.transcript,
+    ];
 
-    if (!voiceSupport.ok) {
-      setVoiceMessage(voiceSupport.message);
+    return candidates.find((candidate) => typeof candidate === "string" && candidate.trim())?.trim() || "";
+  }
+
+  async function handleNativeVoiceInput() {
+    if (!Capacitor.isNativePlatform()) return false;
+    if (isListening) return true;
+
+    try {
+      setIsListening(true);
+      setVoiceMessage("Native mic is listening. Speak your full reminder, then finish speaking.");
+
+      const permission = await NativeSpeechRecognition.requestPermissions();
+      const states = Object.values(permission || {});
+      const denied = states.some((value) => value === "denied");
+      const granted = states.length === 0 || states.some((value) => value === "granted");
+
+      if (denied || !granted) {
+        setVoiceMessage("Microphone permission is not available. Allow microphone access for RemindIQ in Android settings.");
+        setIsListening(false);
+        return true;
+      }
+
+      const availability = await NativeSpeechRecognition.available();
+      if (availability && availability.available === false) {
+        setVoiceMessage("Native speech recognition is not available on this Android device. Use typing while we validate this device.");
+        setIsListening(false);
+        return true;
+      }
+
+      const result = await NativeSpeechRecognition.start({
+        language: "en-IN",
+        maxResults: 3,
+        partialResults: false,
+        popup: true,
+        prompt: "Speak your RemindIQ reminder",
+      });
+
+      const spokenText = extractNativeTranscript(result);
+      setIsListening(false);
+
+      if (!spokenText) {
+        setVoiceMessage("I did not catch that. Tap Mic and try again.");
+        return true;
+      }
+
+      setInput("");
+      setVoiceMessage(`Native voice captured and sent: ${spokenText}`);
+      processText(spokenText);
+      return true;
+    } catch (error: any) {
+      setIsListening(false);
+      const message = error?.message || error?.errorMessage || String(error || "unknown error");
+      setVoiceMessage(`Native voice failed: ${message}. Check microphone permission and try again.`);
+      return true;
+    }
+  }
+
+  async function handleVoiceInput() {
+    const nativeHandled = await handleNativeVoiceInput();
+    if (nativeHandled) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const isSecureEnough = window.location.protocol === "https:" || isLocalhost;
+
+    if (!isSecureEnough) {
+      setVoiceMessage("Voice needs HTTPS on phones. Open the deployed Vercel link, not the local Wi-Fi link.");
+      return;
+    }
+
+    if (!SpeechRecognition) {
+      setVoiceMessage("Voice input is not supported in this browser. Use Chrome/Edge, or use the phone keyboard mic.");
       return;
     }
 
     if (isListening) return;
 
-    const recognition = new voiceSupport.SpeechRecognition();
+    const recognition = new SpeechRecognition();
     recognition.lang = "en-IN";
-    recognition.interimResults = true;
+    recognition.interimResults = false;
     recognition.continuous = false;
     recognition.maxAlternatives = 1;
 
@@ -694,11 +696,9 @@ function App() {
     const cleanup = () => {
       if (silenceTimer) window.clearTimeout(silenceTimer);
       setIsListening(false);
-      setInterimTranscript("");
     };
 
     setIsListening(true);
-    setInterimTranscript("");
     setVoiceMessage("Listening... speak now.");
 
     silenceTimer = window.setTimeout(() => {
@@ -715,33 +715,17 @@ function App() {
     }, 9000);
 
     recognition.onresult = (event: any) => {
-      let interim = "";
-      let final = "";
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const transcript = event.results[index][0].transcript.trim();
-        if (event.results[index].isFinal) final += `${transcript} `;
-        else interim += `${transcript} `;
-      }
-
-      if (interim.trim()) {
-        setInterimTranscript(interim.trim());
-        setVoiceMessage(`Hearing: ${interim.trim()}`);
-      }
-
-      if (!final.trim()) return;
-
       handledResult = true;
       cleanup();
 
-      const spokenText = final.trim();
-      if (!spokenText) {
+      const spokenText = event.results?.[0]?.[0]?.transcript || "";
+      if (!spokenText.trim()) {
         setVoiceMessage("I did not catch that. Please try again.");
         return;
       }
 
       setInput("");
-      setVoiceMessage(`Voice captured: ${spokenText}`);
+      setVoiceMessage(`Voice captured and sent: ${spokenText}`);
       processText(spokenText);
     };
 
@@ -752,7 +736,7 @@ function App() {
       const error = event?.error || "unknown";
       if (error === "not-allowed" || error === "service-not-allowed") {
         setVoiceMessage(
-          "Voice permission was blocked. Open the HTTPS link in Chrome, allow Microphone for this site, then tap Speak again."
+          "Voice permission was blocked by the browser speech service. Open the HTTPS link in Chrome, allow Microphone for this site, then tap Speak again. If it still fails, use the phone keyboard mic."
         );
       } else if (error === "no-speech") {
         setVoiceMessage("No speech was detected. Tap Speak and start talking immediately.");
@@ -779,142 +763,6 @@ function App() {
       cleanup();
       const message = error?.message || "unknown error";
       setVoiceMessage(`Voice could not start: ${message}. Try Chrome/Edge over HTTPS, or use the keyboard mic.`);
-    }
-  }
-
-  function startInAppListeningMode() {
-    const voiceSupport = canUseVoice();
-
-    if (!voiceSupport.ok) {
-      setVoiceMessage(voiceSupport.message);
-      return;
-    }
-
-    try {
-      listeningRecognitionRef.current?.stop?.();
-    } catch {
-      // Ignore stale recognition shutdown errors.
-    }
-
-    const recognition = new voiceSupport.SpeechRecognition();
-    recognition.lang = "en-IN";
-    recognition.interimResults = true;
-    recognition.continuous = true;
-    recognition.maxAlternatives = 1;
-
-    listeningRecognitionRef.current = recognition;
-    setInterimTranscript("");
-    setLastHeard("");
-    setListeningModeSafely("waiting_for_wake_word");
-    setVoiceMessage("Listening mode started. Say MiniViktor, then speak your reminder.");
-
-    recognition.onstart = () => {
-      setListeningModeSafely(listeningModeRef.current === "off" ? "waiting_for_wake_word" : listeningModeRef.current);
-    };
-
-    recognition.onresult = (event: any) => {
-      let interim = "";
-      let final = "";
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const transcript = event.results[index][0].transcript.trim();
-        if (event.results[index].isFinal) final += `${transcript} `;
-        else interim += `${transcript} `;
-      }
-
-      if (interim.trim()) {
-        setInterimTranscript(interim.trim());
-      }
-
-      if (!final.trim()) return;
-
-      const spokenText = final.trim();
-      setLastHeard(spokenText);
-      setInterimTranscript("");
-
-      if (listeningModeRef.current === "waiting_for_wake_word") {
-        const { wakeDetected, commandText } = extractCommandAfterWakeWord(spokenText);
-
-        if (!wakeDetected) {
-          setVoiceMessage("Listening for MiniViktor...");
-          return;
-        }
-
-        if (commandText.length > 5) {
-          setVoiceMessage(`MiniViktor heard: ${commandText}`);
-          processText(commandText);
-          setListeningModeSafely("waiting_for_wake_word");
-          return;
-        }
-
-        const assistantText = "Yes, what should I remind you about?";
-        setMessages((prev) => addMessageToList(prev, "assistant", assistantText));
-        speakText(assistantText);
-        setVoiceMessage(assistantText);
-        setListeningModeSafely("capturing_reminder");
-        return;
-      }
-
-      if (listeningModeRef.current === "capturing_reminder") {
-        setVoiceMessage(`MiniViktor captured: ${spokenText}`);
-        processText(spokenText);
-        setListeningModeSafely("waiting_for_wake_word");
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      const error = event?.error || "unknown";
-
-      if (listeningModeRef.current === "off") return;
-
-      if (error === "not-allowed" || error === "service-not-allowed") {
-        setListeningModeSafely("off");
-        setVoiceMessage("Microphone permission was blocked. Allow Microphone for this site and start Listening Mode again.");
-        return;
-      }
-
-      if (error === "audio-capture") {
-        setListeningModeSafely("off");
-        setVoiceMessage("Microphone is not available. Close other apps using the mic and try again.");
-        return;
-      }
-
-      if (error !== "no-speech" && error !== "aborted") {
-        setVoiceMessage(`Listening mode warning: ${error}. I will try to keep listening.`);
-      }
-    };
-
-    recognition.onend = () => {
-      if (listeningModeRef.current === "off") return;
-
-      window.setTimeout(() => {
-        if (listeningModeRef.current === "off") return;
-        try {
-          recognition.start();
-        } catch {
-          // Browsers sometimes need a short pause before restarting speech recognition.
-        }
-      }, 450);
-    };
-
-    try {
-      recognition.start();
-    } catch (error: any) {
-      setListeningModeSafely("off");
-      const message = error?.message || "unknown error";
-      setVoiceMessage(`Listening mode could not start: ${message}. Try Chrome/Edge over HTTPS.`);
-    }
-  }
-
-  function stopInAppListeningMode() {
-    setListeningModeSafely("off");
-    setInterimTranscript("");
-    setVoiceMessage("Listening mode stopped.");
-
-    try {
-      listeningRecognitionRef.current?.stop?.();
-    } catch {
-      // Ignore browser speech stop errors.
     }
   }
 
@@ -1002,33 +850,6 @@ function App() {
           <span className="helper-text">Voice/alerts are best after HTTPS deployment.</span>
         </div>
 
-        <div className={listeningMode === "off" ? "listening-mode-card" : "listening-mode-card active"}>
-          <div>
-            <strong>MiniViktor Listening Mode</strong>
-            <span>
-              {listeningMode === "off"
-                ? "Off"
-                : listeningMode === "waiting_for_wake_word"
-                  ? "Listening for wake word"
-                  : "Ready for reminder"}
-            </span>
-          </div>
-          <p>Say “MiniViktor” while this app is open, then speak your reminder.</p>
-          <div className="listening-mode-actions">
-            {listeningMode === "off" ? (
-              <button className="secondary-button compact" onClick={startInAppListeningMode} type="button">
-                Start Listening Mode
-              </button>
-            ) : (
-              <button className="danger-action-button compact" onClick={stopInAppListeningMode} type="button">
-                Stop Listening Mode
-              </button>
-            )}
-          </div>
-          {interimTranscript && <small>Hearing: {interimTranscript}</small>}
-          {lastHeard && <small>Last heard: {lastHeard}</small>}
-        </div>
-
         <div className="chat-panel">
           <div className="chat-thread">
             {messages.length === 0 && (
@@ -1082,7 +903,7 @@ function App() {
 
             <div className="composer-actions">
               <button className={isListening ? "secondary-button listening" : "secondary-button"} onClick={handleVoiceInput} type="button">
-                {isListening ? "Listening..." : "Tap to Speak"}
+                {isListening ? "Listening..." : Capacitor.isNativePlatform() ? "Mic" : "Speak"}
               </button>
 
               <button className="primary-button" onClick={handleSend} type="button">
@@ -1091,7 +912,6 @@ function App() {
             </div>
 
             {voiceMessage && <p className="voice-message">{voiceMessage}</p>}
-            {interimTranscript && listeningMode === "off" && <p className="voice-message">Hearing: {interimTranscript}</p>}
           </div>
         </div>
       </section>

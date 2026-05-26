@@ -1,0 +1,33 @@
+RemindIQ Sprint Voice-1A: Android Native Voice Auto-Submit
+
+Purpose
+- Tap Mic inside the Android app.
+- Android native speech captures the transcript.
+- Transcript auto-submits into MiniViktor.
+- No keyboard and no manual Send required for the primary voice flow.
+
+Required dependency
+Run from the RemindIQ project folder:
+
+npm.cmd install @capgo/capacitor-speech-recognition
+npm.cmd run build
+npx.cmd cap sync android
+npx.cmd cap open android
+
+Then in Android Studio:
+1. Select the connected Android phone.
+2. Click Run.
+3. When RemindIQ opens, tap Mic.
+4. Allow microphone permission if prompted.
+5. Speak: Meet Raj tomorrow at 6 pm.
+6. MiniViktor should process the transcript automatically.
+
+Notes
+- This uses a native Capacitor speech-recognition plugin for the Android app path.
+- The PWA/browser path remains as fallback.
+- Do not use paid cloud transcription in this sprint.
+- Do not start calendar integration before the native mic flow works.
+
+Commit message after successful Android voice test:
+git add .
+git commit -m "Sprint Voice-1A Android native voice auto submit"
