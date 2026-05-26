@@ -19,6 +19,10 @@ export function normaliseWithMiniViktor(input: string) {
   let output = input
     .replace(/[’‘]/g, "'")
     .replace(/[“”]/g, '"')
+    // Native/keyboard dictation often returns "p m", "p.m", "P M" or "8 p m".
+    // MiniViktor must normalize those before time parsing, otherwise it asks AM/PM again
+    // even when the user already said PM.
+    .replace(/\b([ap])\s*\.?\s*m\.?\b/gi, (_match, period: string) => `${period.toLowerCase()}m`)
     .replace(/\s+/g, " ")
     .trim();
 

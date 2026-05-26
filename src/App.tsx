@@ -177,6 +177,7 @@ function App() {
   const [issueType, setIssueType] = useState<FeedbackIssueType>("Did not understand");
   const [feedbackComment, setFeedbackComment] = useState("");
   const [feedbackItems, setFeedbackItems] = useState<BetaFeedbackItem[]>([]);
+  const [exportPreview, setExportPreview] = useState<{ filename: string; contents: string; mimeType: string } | null>(null);
   const [sidePanel, setSidePanel] = useState<"reminders" | "feedback">("reminders");
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -571,24 +572,88 @@ function App() {
     return rows.map((row) => row.map((cell) => escape(String(cell ?? ""))).join(",")).join("\n");
   }
 
-  function downloadText(filename: string, contents: string, mimeType: string) {
-    const blob = new Blob([contents], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+  function isNativeAndroidShell() {
+    const capacitor = (window as any).Capacitor;
+    return Boolean(capacitor?.isNativePlatform?.()) || /; wv\)/i.test(navigator.userAgent);
+  }
+
+  async function copyTextToClipboard(contents: string) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(contents);
+      return true;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = contents;
+    textarea.setAttribute("readonly", "true");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    return copied;
+  }
+
+  async function exportText(filename: string, contents: string, mimeType: string) {
+    const payload = { filename, contents, mimeType };
+    setExportPreview(payload);
+
+    try {
+      const file = new File([contents], filename, { type: mimeType });
+      const nav = navigator as any;
+      if (nav.share && nav.canShare?.({ files: [file] })) {
+        await nav.share({ title: filename, text: "RemindIQ beta feedback export", files: [file] });
+        setVoiceMessage(`${filename} shared successfully.`);
+        return;
+      }
+    } catch {
+      // Continue to download/copy fallback.
+    }
+
+    if (!isNativeAndroidShell()) {
+      try {
+        const blob = new Blob([contents], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        setVoiceMessage(`${filename} downloaded.`);
+        return;
+      } catch {
+        // Continue to copy fallback.
+      }
+    }
+
+    try {
+      const copied = await copyTextToClipboard(contents);
+      setVoiceMessage(
+        copied
+          ? `${filename} copied. If download is blocked in the Android app, paste this into WhatsApp/email or use the export preview.`
+          : `Download is blocked in this app view. Export preview is shown below.`
+      );
+    } catch {
+      setVoiceMessage("Download is blocked in this app view. Export preview is shown below for manual copy.");
+    }
   }
 
   function handleExportFeedbackJson() {
-    downloadText("remindiq-beta-feedback.json", JSON.stringify(feedbackItems, null, 2), "application/json");
+    void exportText("remindiq-beta-feedback.json", JSON.stringify(feedbackItems, null, 2), "application/json");
   }
 
   function handleExportFeedbackCsv() {
-    downloadText("remindiq-beta-feedback.csv", feedbackToCsv(feedbackItems), "text/csv");
+    void exportText("remindiq-beta-feedback.csv", feedbackToCsv(feedbackItems), "text/csv");
+  }
+
+  function handleCopyExportPreview() {
+    if (!exportPreview) return;
+    void copyTextToClipboard(exportPreview.contents).then((copied) => {
+      setVoiceMessage(copied ? `${exportPreview.filename} copied.` : "Could not copy automatically. Long-press the export text and copy manually.");
+    });
   }
 
   function handleClearFeedback() {
@@ -1084,6 +1149,22 @@ function App() {
                   Clear local feedback
                 </button>
               </div>
+
+
+              {exportPreview && (
+                <div className="export-preview-card">
+                  <div className="export-preview-header">
+                    <strong>{exportPreview.filename}</strong>
+                    <button className="quiet-action-button mini-button" onClick={() => setExportPreview(null)} type="button">
+                      Close
+                    </button>
+                  </div>
+                  <textarea className="export-preview-text" value={exportPreview.contents} readOnly rows={4} />
+                  <button className="quiet-action-button" onClick={handleCopyExportPreview} type="button">
+                    Copy export text
+                  </button>
+                </div>
+              )}
 
               <p className="brain-hint">
                 Feedback is stored on this device only. Export JSON/CSV before clearing browser data or sharing results.
