@@ -1410,3 +1410,53 @@ textarea:focus,
   padding: 0.35rem 0.55rem;
   min-height: 2rem;
 }
+
+.voice-loop-hint {
+  margin: 8px 0 0;
+  color: #f5d487;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+
+.voice-transcript-review {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(245, 197, 110, 0.22);
+  border-radius: 12px;
+  background: rgba(245, 197, 110, 0.08);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.voice-transcript-review span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-transcript-review button {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8e7c2;
+}
+
+@media (max-width: 720px) {
+  .voice-transcript-review {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .voice-transcript-review button {
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+}

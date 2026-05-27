@@ -23,6 +23,9 @@ export function normaliseWithMiniViktor(input: string) {
     // MiniViktor must normalize those before time parsing, otherwise it asks AM/PM again
     // even when the user already said PM.
     .replace(/\b([ap])\s*\.?\s*m\.?\b/gi, (_match, period: string) => `${period.toLowerCase()}m`)
+    .replace(/\b(am|pm)\./gi, "$1")
+    .replace(/\brajat\s+atm\b/gi, "Raj at 8 pm")
+    .replace(/\brajat\s+(\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm)?)/gi, "Raj at $1")
     .replace(/\s+/g, " ")
     .trim();
 

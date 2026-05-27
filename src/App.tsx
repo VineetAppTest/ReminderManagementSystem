@@ -31,6 +31,7 @@ type FeedbackIssueType =
   | "Wrong AM/PM assumption"
   | "Multiple reminders issue"
   | "Save/notification issue"
+  | "Voice input issue"
   | "UI issue"
   | "Other";
 
@@ -55,6 +56,7 @@ const FEEDBACK_ISSUE_TYPES: FeedbackIssueType[] = [
   "Wrong AM/PM assumption",
   "Multiple reminders issue",
   "Save/notification issue",
+  "Voice input issue",
   "UI issue",
   "Other",
 ];
@@ -111,6 +113,42 @@ function getTodayLabel() {
   });
 }
 
+function voiceLoopInstruction(draft: ReminderDraft | null, readyToSave: boolean) {
+  if (!Capacitor.isNativePlatform()) {
+    return "Web voice is fallback only. Android app uses native mic.";
+  }
+
+  if (!draft) {
+    return "Tap Mic, speak the full reminder, and MiniViktor will process it automatically.";
+  }
+
+  if (readyToSave) {
+    return "Tap Mic and say “save it”, “change it”, or “drop it”.";
+  }
+
+  if (draft.pendingAmbiguousTime) {
+    return "Tap Mic and answer AM or PM.";
+  }
+
+  if (draft.pendingInferenceConfirmation) {
+    return "Tap Mic and say “yes” to confirm, or correct the reminder time.";
+  }
+
+  if (!draft.task) {
+    return "Tap Mic and say what the reminder is about.";
+  }
+
+  if (!draft.eventDateISO) {
+    return "Tap Mic and say the day or date.";
+  }
+
+  if (!draft.eventTimeText && draft.alerts.length === 0) {
+    return "Tap Mic and say the time.";
+  }
+
+  return "Tap Mic to answer MiniViktor’s follow-up.";
+}
+
 function addMessageToList(messages: ChatMessage[], role: "user" | "assistant", text: string): ChatMessage[] {
   return [
     ...messages,
@@ -121,6 +159,15 @@ function addMessageToList(messages: ChatMessage[], role: "user" | "assistant", t
       createdAt: new Date().toISOString(),
     },
   ];
+}
+
+
+function isHardVoiceCorrection(text: string) {
+  return /^(that'?s wrong|thats wrong|wrong|no that'?s wrong|correct that|retry|try again|misheard|you heard wrong)$/i.test(text.trim());
+}
+
+function isStartOverIntent(text: string) {
+  return /^(start over|restart|new reminder|reset|clear this|clear reminder)$/i.test(text.trim());
 }
 
 function isToday(iso: string | null) {
@@ -164,6 +211,7 @@ function App() {
   const [learning, setLearning] = useState<LearningMemory>(DEFAULT_LEARNING_MEMORY);
   const [notificationState, setNotificationState] = useState<NotificationState>("unsupported");
   const [voiceMessage, setVoiceMessage] = useState("");
+  const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
   const [search, setSearch] = useState("");
@@ -344,6 +392,15 @@ function App() {
       !draft.pendingInferenceConfirmation
   );
 
+  const voiceLoopText = useMemo(() => voiceLoopInstruction(draft, readyToSave), [draft, readyToSave]);
+  const micButtonLabel = isListening
+    ? "Listening..."
+    : Capacitor.isNativePlatform()
+      ? draft
+        ? "Mic reply"
+        : "Mic"
+      : "Speak";
+
   useEffect(() => {
     if (!readyToSave) {
       setActionButtonsArmed(false);
@@ -394,6 +451,26 @@ function App() {
     if (!cleanText) return;
 
     setMessages((prev) => addMessageToList(prev, "user", cleanText));
+
+    if (draft && isStartOverIntent(cleanText)) {
+      setDraft(null);
+      setInput("");
+      setVoiceMessage("Draft cleared. Tap Mic and say the full reminder again.");
+      setMessages((prev) =>
+        addMessageToList(prev, "assistant", "Started over. Tap Mic and say the full reminder again.")
+      );
+      return;
+    }
+
+    if (draft && !draft.pendingInferenceConfirmation && isHardVoiceCorrection(cleanText)) {
+      setDraft(null);
+      setInput("");
+      setVoiceMessage("I’ll ignore the last draft. Tap Mic and repeat the full reminder clearly.");
+      setMessages((prev) =>
+        addMessageToList(prev, "assistant", "Understood — I’ll ignore that draft. Tap Mic and repeat the full reminder clearly.")
+      );
+      return;
+    }
 
     if (draft && readyToSave && isSaveIntent(cleanText)) {
       setTimeout(saveDraft, 0);
@@ -542,6 +619,7 @@ function App() {
     setDraft(null);
     setInput("");
     setVoiceMessage("");
+    setLastVoiceTranscript("");
     setMessages([
       {
         id: safeId(),
@@ -712,12 +790,13 @@ function App() {
       setIsListening(false);
 
       if (!spokenText) {
-        setVoiceMessage("I did not catch that. Tap Mic and try again.");
+        setVoiceMessage("I did not catch that. Tap Mic and try again, or say “start over” if the previous draft is wrong.");
         return true;
       }
 
       setInput("");
-      setVoiceMessage(`Native voice captured and sent: ${spokenText}`);
+      setLastVoiceTranscript(spokenText);
+      setVoiceMessage(`Captured: “${spokenText}”. Auto-sent to MiniViktor.`);
       processText(spokenText);
       return true;
     } catch (error: any) {
@@ -790,7 +869,7 @@ function App() {
       }
 
       setInput("");
-      setVoiceMessage(`Voice captured and sent: ${spokenText}`);
+      setVoiceMessage(`Heard: “${spokenText}”. Sent to MiniViktor. Tap Speak again to answer.`);
       processText(spokenText);
     };
 
@@ -968,7 +1047,7 @@ function App() {
 
             <div className="composer-actions">
               <button className={isListening ? "secondary-button listening" : "secondary-button"} onClick={handleVoiceInput} type="button">
-                {isListening ? "Listening..." : Capacitor.isNativePlatform() ? "Mic" : "Speak"}
+                {micButtonLabel}
               </button>
 
               <button className="primary-button" onClick={handleSend} type="button">
@@ -976,7 +1055,15 @@ function App() {
               </button>
             </div>
 
+            <p className="voice-loop-hint">{voiceLoopText}</p>
             {voiceMessage && <p className="voice-message">{voiceMessage}</p>}
+            {lastVoiceTranscript && (
+              <div className="voice-transcript-review">
+                <span>Last heard: “{lastVoiceTranscript}”</span>
+                <button type="button" onClick={() => setInput(lastVoiceTranscript)}>Edit</button>
+                <button type="button" onClick={() => processText("that's wrong")}>Wrong</button>
+              </div>
+            )}
           </div>
         </div>
       </section>

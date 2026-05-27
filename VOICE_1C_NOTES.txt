@@ -1,0 +1,12 @@
+Sprint Voice-1C: Voice Error Recovery + Review Layer
+
+This build adds:
+- Last captured transcript review strip
+- Edit / Wrong controls for misheard voice input
+- Voice commands: "that's wrong", "wrong", "correct that", "start over", "cancel this reminder"
+- Stronger "I said..." correction handling
+- Feedback issue type: Voice input issue
+- Empty voice retry message
+
+Hard rule:
+A bad transcript should not poison the active draft. If the user says "that's wrong" or "start over", the active draft is cleared and MiniViktor asks for a clean retry.

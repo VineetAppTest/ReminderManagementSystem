@@ -470,6 +470,8 @@ function stripNoiseFromTask(input: string) {
     .replace(/\bat\s+\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/gi, "")
     .replace(/\b\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)\b/gi, "")
     .replace(/\bhalf an hour before\b|\bhalf hour before\b|\ban hour before\b|\bone hour before\b|\bquarter of an hour before\b/gi, "")
+    .replace(/[.,;:]+$/g, "")
+    .replace(/\s+[.,;:]+/g, "")
     .replace(/[ ,]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -821,7 +823,7 @@ export function isSaveIntent(text: string) {
 }
 
 export function isCancelIntent(text: string) {
-  return /^(no|cancel|drop|drop it|not needed|doesn't work|doesnt work|doesn’t work)$/i.test(text.trim());
+  return /^(no|cancel|cancel this reminder|drop|drop it|not needed|doesn't work|doesnt work|doesn’t work|start over|restart|new reminder|reset)$/i.test(text.trim());
 }
 
 export function isChangeIntent(text: string) {
@@ -899,16 +901,22 @@ export function processUserText(
   learning?: LearningMemory,
   options?: { now?: Date }
 ): EngineResult {
-  const input = normaliseInput(userInput);
+  let input = normaliseInput(userInput);
   const now = options?.now || new Date();
-  let draft = currentDraft ? { ...currentDraft, alerts: [...currentDraft.alerts] } : createEmptyDraft();
+  const correctionMatch = input.match(/^(?:no,?\s*)?(?:i said|actually|correction|correct that to|change that to)\s+(.+)$/i);
+  const shouldResetDraftFromCorrection = Boolean(correctionMatch);
+  if (correctionMatch) {
+    input = normaliseInput(correctionMatch[1]);
+  }
+  let draft = !shouldResetDraftFromCorrection && currentDraft ? { ...currentDraft, alerts: [...currentDraft.alerts] } : createEmptyDraft();
+  const contextDraft = shouldResetDraftFromCorrection ? null : currentDraft;
   const miniViktorIntent = classifyMiniViktorIntent(input, {
-    hasDraft: Boolean(currentDraft),
-    hasTask: Boolean(currentDraft?.task?.trim()),
-    hasEventDate: Boolean(currentDraft?.eventDateISO),
-    hasEventTime: Boolean(currentDraft?.eventTimeText),
-    hasAlerts: Boolean(currentDraft?.alerts?.length),
-    awaitingAMPM: Boolean(currentDraft?.pendingAmbiguousTime),
+    hasDraft: Boolean(contextDraft),
+    hasTask: Boolean(contextDraft?.task?.trim()),
+    hasEventDate: Boolean(contextDraft?.eventDateISO),
+    hasEventTime: Boolean(contextDraft?.eventTimeText),
+    hasAlerts: Boolean(contextDraft?.alerts?.length),
+    awaitingAMPM: Boolean(contextDraft?.pendingAmbiguousTime),
   });
 
   draft.rawText = [draft.rawText, input].filter(Boolean).join(" | ");
@@ -938,6 +946,19 @@ export function processUserText(
       draft,
       assistantText: responseForDraft(draft),
       readyToSave: missingSlots(draft).length === 0 && !hasPastAlert(draft.alerts),
+    };
+  }
+
+  if (draft.pendingInferenceConfirmation && /^(no|incorrect|wrong|not correct|change|change it|adjust|adjust it)$/i.test(input.trim())) {
+    draft = {
+      ...draft,
+      alerts: [],
+      pendingInferenceConfirmation: null,
+    };
+    return {
+      draft,
+      assistantText: "Understood — please say the reminder times again with AM or PM so I do not save the wrong reminder.",
+      readyToSave: false,
     };
   }
 
@@ -973,7 +994,7 @@ export function processUserText(
     // MiniViktor must not throw away a clear task just because the same
     // sentence also contains reminder instructions. This is required for
     // phrases like “Team meeting at 5 pm, remind me half an hour before”.
-    if (taskCandidate && (!currentDraft || !draft.task.trim())) {
+    if (taskCandidate && (!contextDraft || !draft.task.trim())) {
       draft.task = taskCandidate;
     }
   }
@@ -986,7 +1007,7 @@ export function processUserText(
   }
 
   const eventToken = explicitEventTime(input, draft);
-  const isPureReminderFollowUp = Boolean(currentDraft?.eventTimeText) && messageIsAlertInstruction;
+  const isPureReminderFollowUp = Boolean(contextDraft?.eventTimeText) && messageIsAlertInstruction;
 
   if (eventToken && !isPureReminderFollowUp) {
     draft = applyEventTime(draft, eventToken, input);
