@@ -1,0 +1,68 @@
+[
+  {
+    "id": "3m2-repeat-001",
+    "category": "repeat_clarification",
+    "conversation": [
+      "set a repeat reminder",
+      "repetition should be after 1 hour and alarm is for 1 minute from now"
+    ],
+    "expected": {
+      "taskIncludes": "Alarm",
+      "firstAlarm": "1 minute from now",
+      "repeatIntervalMinutes": 60,
+      "mustNotAskDailyWeeklyAgain": true
+    }
+  },
+  {
+    "id": "3m2-repeat-002",
+    "category": "repeat_clarification",
+    "conversation": [
+      "set a repeat reminder",
+      "today only"
+    ],
+    "expected": {
+      "repeatEndScope": "today",
+      "mustNotAskDailyWeeklyAgain": true,
+      "shouldAskFor": ["first alarm", "repeat interval"]
+    }
+  },
+  {
+    "id": "3m2-repeat-003",
+    "category": "voice_repeat_misrecognition",
+    "conversation": [
+      "create repeating alarm 1 minute from now receives everyone for today only"
+    ],
+    "expected": {
+      "firstAlarm": "1 minute from now",
+      "repeatIntervalMinutes": 60,
+      "repeatEndScope": "today",
+      "mustBeReadyToConfirm": true
+    }
+  },
+  {
+    "id": "3m2-repeat-004",
+    "category": "repeat_relative_retry",
+    "conversation": [
+      "create repeating alarm 1 minute from now receives everyone for today only",
+      "save",
+      "1 minute from now"
+    ],
+    "expected": {
+      "relativeTimeMustRecalculateFromCurrentNow": true,
+      "mustNotSayAlreadyPassed": true
+    }
+  },
+  {
+    "id": "3m2-repeat-005",
+    "category": "repeat_clarification",
+    "conversation": [
+      "set a repeat reminder",
+      "repeaters today only and ring should be after 1 hour"
+    ],
+    "expected": {
+      "repeatEndScope": "today",
+      "repeatIntervalMinutes": 60,
+      "mustNotSayUnrelated": true
+    }
+  }
+]

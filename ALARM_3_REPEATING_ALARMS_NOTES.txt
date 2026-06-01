@@ -1,0 +1,28 @@
+Sprint Alarm-3: Repeating Alarms
+
+This build adds first-pass support for recurring alarm commands:
+
+1. "Create a repetitive alarm with 1 hour interval"
+   - Interprets as repeat every 1 hour.
+   - Asks when the first alarm should start.
+
+2. "Create a repetitive alarm after 1 hour"
+   - Interprets as first alarm 1 hour from now and repeats every 1 hour.
+
+3. "Create a repetitive alarm daily at 2 pm"
+   - Interprets as daily repeating alarm at 2:00 PM.
+
+4. "Weekly repeat alarm at 5 pm Monday"
+   - Interprets as weekly repeating alarm on Monday at 5:00 PM.
+
+5. "Create a daily or weekly repeat alarm"
+   - Asks the user to choose daily or weekly and provide the time.
+
+Native Android behaviour:
+- Repeat metadata is passed into the native alarm bridge.
+- The AlarmReceiver schedules the next occurrence after each firing.
+- One-time alarm logic remains unchanged.
+
+Hard limitation:
+- This is not yet a full recurring-alarm management module. Editing/cancelling an entire series is basic and should be tested carefully.
+- Alarm-3 should be treated as UAT build, not production-stable.

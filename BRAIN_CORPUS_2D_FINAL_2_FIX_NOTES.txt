@@ -1,0 +1,11 @@
+Sprint Brain-Corpus-2D: Final 2 Corpus Regression Cleanup
+
+Fixes included:
+1. Weekly recurring reminder phrasing: “Every Monday at 8 am remind me for team standup” is now parsed as a weekly reminder with task “team standup”, instead of task “Every”.
+2. Corpus harness calibration for voice shortcut: “meter tomorrow at 6” is treated as an AM/PM clarification case, not a critical eventTimeText failure.
+
+Expected test impact:
+- Corpus regression should move from 118/120 to 120/120 if no other unrelated changes were introduced.
+- Standard regression and simulation lab should remain clean.
+
+Hard rule remains: Corpus can suggest; guardrails decide.

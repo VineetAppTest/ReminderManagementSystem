@@ -1,0 +1,37 @@
+RemindIQ Sprint Alarm-2A Fix 1 — Alarm + Spoken MiniViktor + Reminder Command Repair
+
+This patch addresses three reported issues:
+
+1. MiniViktor could not understand: "Remind me to test alarm at 6:42 pm"
+   Fix: reminder-command task extraction now understands:
+   - remind me to test alarm at 6:42 pm
+   - remind me for cooking at 2 pm
+   - remind me at 2 pm for cooking
+
+2. MiniViktor did not respond in voice inside Android app.
+   Fix: adds native TextToSpeech plugin bridge and keeps Web Speech fallback.
+   Required install command from project folder:
+   npm.cmd install @capacitor-community/text-to-speech
+
+3. Reminder showed only weak notification / no locked-phone alarm sound.
+   Fix: creates a new Android notification channel:
+   - remindiq_alarms_v3
+   This avoids old sticky Android notification-channel settings.
+
+Important Android step:
+Uninstall the old RemindIQ app from the phone before installing this build.
+Android notification channel settings are sticky across app updates.
+
+Recommended AndroidManifest permissions to verify later if alarm still does not appear locked:
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+Test:
+1. Build and sync.
+2. Install fresh on phone.
+3. Allow microphone and notification permissions.
+4. Say/type: Remind me to test alarm at 6:42 pm
+5. MiniViktor should understand task = test alarm and time = 6:42 pm.
+6. Save reminder 2 minutes from now.
+7. Lock phone.
+8. Notification should appear with sound/vibration.

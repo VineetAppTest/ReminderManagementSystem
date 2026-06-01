@@ -1,0 +1,46 @@
+RemindIQ Sprint Alarm-3E — Repeat Today-Only Voice Fix
+
+Issue resolved
+- Google Mic can hear "every 1 hour" / "every one hour" as "everyone".
+- MiniViktor previously treated that as an unknown repeat kind and kept asking: "Should this repeat daily or weekly?"
+- User replies like "only today" / "today only" were not accepted as valid repeat boundary answers.
+- Full-screen alarm readability was improved with a higher-contrast native Android alarm screen.
+
+What changed
+1. Added repeat voice normalisation:
+   - "repeats everyone" -> "repeats every 1 hour"
+   - "repeats after everyone" -> "repeats every 1 hour"
+   - scoped only to repeat/alarm contexts.
+
+2. Added today-only repeat boundary support:
+   - "today only"
+   - "only today"
+   - "for today only"
+   - "just today"
+
+3. Added repeat end metadata:
+   - repeatRule.endDateISO
+   - repeatRule.endDatePhrase
+
+4. Updated repeat scheduling:
+   - repeating reminders stop rescheduling once the next due time would cross the repeat end date.
+   - This prevents a "today only" repeat from continuing tomorrow.
+
+5. Added recovery for pending repeat-kind loops:
+   - If MiniViktor is waiting for repeat kind and user says "today only", it now resolves to hourly repeat with first due from the original relative start when available.
+
+6. Improved native full-screen alarm contrast:
+   - darker background
+   - high-contrast title/body panels
+   - stronger text color and shadow for readability.
+
+Recommended validation phrases
+- create a repeating alarm 1 minute from now which repeats everyone
+- create a repeating alarm 1 minute from now which repeats everyone for today only
+- create a repeating alarm 1 minute from now which repeats after everyone for today only
+- create a repeating alarm 1 minute from now which repeats every 1 hour for today only
+
+Expected result
+- MiniViktor should interpret the repeat as every 1 hour.
+- First alarm should start 1 minute from now.
+- If "today only" is present, repeat should not continue tomorrow.

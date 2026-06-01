@@ -1,0 +1,38 @@
+[
+  {
+    "id": "3M1-edit-001",
+    "name": "Rename after missing task flow",
+    "steps": ["set a reminder for 10:00 p.m.", "sleep time", "change something", "next now", "save it"],
+    "expected": {"task": "next now", "timeText": "10:00 pm"}
+  },
+  {
+    "id": "3M1-edit-002",
+    "name": "Rename then relative time change",
+    "steps": ["set a reminder for 10:00 p.m.", "sleep time", "change something", "next now", "change it", "1 minute from now", "save it"],
+    "expected": {"task": "next now", "timeText": "relative_current_plus_1_minute"}
+  },
+  {
+    "id": "3M1-edit-003",
+    "name": "Rename then absolute time change must not overwrite title",
+    "steps": ["set a reminder for 10:00 p.m.", "sleep time", "change something", "next now", "adjusted", "make it 12:00 p.m.", "save it"],
+    "expected": {"task": "next now", "timeText": "12:00 pm", "mustNotTask": "12:00 pm"}
+  },
+  {
+    "id": "3M1-alarm-001",
+    "name": "Full-screen alarm long title wrap",
+    "steps": ["remind me to complete the executive readiness business impact and stakeholder update review in one minute", "save it"],
+    "expected": {"fullScreen": "single_screen", "controls": ["Snooze", "Done"], "noHorizontalOverflow": true}
+  },
+  {
+    "id": "3M1-alarm-002",
+    "name": "Done closes alarm without redundant screen",
+    "steps": ["create alarm 1 minute from now", "save it", "wait_for_alarm", "tap_done"],
+    "expected": {"audioStopped": true, "fullScreenClosed": true, "noRedundantControlScreen": true}
+  },
+  {
+    "id": "3M1-alarm-003",
+    "name": "Snooze on full screen",
+    "steps": ["create alarm 1 minute from now", "save it", "wait_for_alarm", "tap_snooze"],
+    "expected": {"audioStopped": true, "rescheduled": true, "fullScreenClosed": true}
+  }
+]

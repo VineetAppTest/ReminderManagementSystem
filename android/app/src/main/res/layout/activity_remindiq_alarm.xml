@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/nativeAlarmRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/remindiq_native_alarm_bg"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="26dp">
+
+    <TextView
+        android:id="@+id/nativeAlarmKicker"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/remindiq_native_alarm_pill"
+        android:paddingLeft="18dp"
+        android:paddingTop="10dp"
+        android:paddingRight="18dp"
+        android:paddingBottom="10dp"
+        android:text="REMINDER DUE"
+        android:textAllCaps="true"
+        android:textColor="#FDE68A"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/nativeAlarmTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="34dp"
+        android:gravity="center"
+        android:text="Due now"
+        android:textColor="#FFFFFF"
+        android:textSize="54sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/nativeAlarmTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:maxLines="4"
+        android:text="Reminder"
+        android:textColor="#FFFFFF"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/nativeAlarmSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:text="Your reminder is due now"
+        android:textColor="#CBD5E1"
+        android:textSize="16sp" />
+
+    <LinearLayout
+        android:id="@+id/nativeAlarmActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="42dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/nativeAlarmSnooze"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_marginRight="7dp"
+            android:layout_weight="1"
+            android:background="@drawable/remindiq_native_alarm_blue_button"
+            android:text="Snooze 5m"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/nativeAlarmDismiss"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_marginLeft="7dp"
+            android:layout_weight="1"
+            android:background="@drawable/remindiq_native_alarm_white_button"
+            android:text="Dismiss"
+            android:textAllCaps="false"
+            android:textColor="#0F172A"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/nativeAlarmOpenApp"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/remindiq_native_alarm_ghost_button"
+        android:text="Open RemindIQ"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/nativeAlarmBuild"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:gravity="center"
+        android:text="3N.12-P0 Native Alarm Spike"
+        android:textColor="#64748B"
+        android:textSize="12sp" />
+
+</LinearLayout>

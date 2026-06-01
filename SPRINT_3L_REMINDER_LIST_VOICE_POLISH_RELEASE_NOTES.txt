@@ -1,0 +1,27 @@
+RemindIQ Sprint Alarm-3L — Reminder List + Voice Polish
+Build: RemindIQ-Sprint-Alarm-3L-Reminder-List-Voice-Polish
+Base: RemindIQ-Sprint-Alarm-3L-MiniViktor-Context-UX-Closeout
+
+Included in this polish build:
+1. Reminder list cards are now more compact and dynamic in height.
+2. Long reminder/alarm phrases are clamped/wrapped safely instead of stretching the card or screen.
+3. Reminder action buttons are smaller, pill-shaped, and better suited for mobile.
+4. Repeating alarm labels remain visible, but raw long input is tucked under Details.
+5. MiniViktor spoken replies are shorter and less robotic.
+6. Voice selection now prefers higher-quality English India / natural / male-style voices where the device/browser exposes them.
+7. MiniViktor pitch and rate were lowered slightly to make the voice less sharp.
+
+Important limitation:
+The exact MiniViktor voice depends on what the Android WebView/browser/device exposes. This build improves selection and speech shaping, but it cannot force a custom Victor voice unless we later add a recorded/custom TTS voice pipeline.
+
+Local validation commands:
+npm.cmd install
+npm.cmd run build
+npx.cmd cap sync android
+npx.cmd cap open android
+
+Suggested checks:
+1. Create several long-title reminders and confirm the reminder list stays compact.
+2. Create repeating alarms and confirm Stop repeat is still visible.
+3. Turn spoken replies on and confirm MiniViktor replies are shorter and less sharp.
+4. Trigger a full-screen alarm and confirm 3L UX controls still work.

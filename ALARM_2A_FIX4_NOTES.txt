@@ -1,0 +1,14 @@
+Sprint Alarm-2A Fix 4: Voice Barge-In + Native Alarm Preparation
+
+Implemented:
+1. Barge-in behaviour: if MiniViktor is speaking and the user taps Mic, MiniViktor stops speaking immediately and the native mic starts listening.
+2. Echo guard remains active: if MiniViktor's own previous spoken response is captured, it is ignored.
+3. Web speech fallback also cancels MiniViktor speech before listening.
+4. Alarm notification channel advanced to remindiq_alarms_v5 to avoid older sticky Android channel settings.
+
+Important:
+- This build removes the earlier mic-blocking behaviour.
+- It does not yet implement a true native full-screen ringing alarm activity. That needs Alarm-2B native Android work.
+
+Next native alarm sprint:
+Alarm-2B should add a true Android ringing alarm activity/service with Stop/Snooze, wake lock, full-screen intent handling, and explicit exact alarm permission guidance.

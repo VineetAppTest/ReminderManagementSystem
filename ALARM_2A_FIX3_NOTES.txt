@@ -1,0 +1,11 @@
+Sprint Alarm-2A Fix 3 Notes
+
+Fix areas:
+1. MiniViktor speech no longer allows mic capture while MiniViktor is speaking.
+2. Captured voice that looks like MiniViktor's own spoken response is ignored to prevent feedback loops.
+3. MiniViktor voice has been tuned lower/slower for a more Victor-like tone, but the exact voice still depends on Android Text-to-Speech voices installed on the phone.
+4. Relative reminder commands such as "create reminder 2 minutes from now" are handled as relative reminders, not as AM/PM time questions.
+5. Android alarm channel is moved to remindiq_alarms_v4 to avoid sticky old notification channel settings.
+
+Important Android limitation:
+Capacitor local notifications can create high-priority sound/vibration notifications, but a true alarm-clock style ringing screen may require a native Android alarm activity/service in a later Alarm-2B sprint. Uninstall old RemindIQ before testing this build so Android uses the new channel.

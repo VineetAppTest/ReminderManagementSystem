@@ -1,0 +1,170 @@
+:root {
+  --ri-alarm-bg: radial-gradient(circle at 18% 8%, rgba(209, 173, 92, 0.22), transparent 28%),
+    radial-gradient(circle at 92% 14%, rgba(34, 211, 238, 0.16), transparent 30%),
+    linear-gradient(145deg, #020617 0%, #0f172a 48%, #111827 100%);
+  --ri-alarm-card: rgba(15, 23, 42, 0.96);
+  --ri-alarm-ink: #f8fafc;
+  --ri-alarm-muted: #cbd5e1;
+  --ri-alarm-soft: rgba(255, 255, 255, 0.08);
+  --ri-alarm-border: rgba(226, 232, 240, 0.16);
+  --ri-alarm-saffron: #f2d27b;
+  --ri-alarm-green: #16a34a;
+  --ri-alarm-red: #ef4444;
+}
+
+.ri-alarm-body-lock { overflow: hidden; }
+
+.ri-alarm-control-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+  background: var(--ri-alarm-bg);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(12px);
+}
+
+.ri-alarm-control-card {
+  position: relative;
+  width: min(100%, 450px);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.96));
+  color: var(--ri-alarm-ink);
+  border: 1px solid rgba(242, 210, 123, 0.22);
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+.ri-alarm-control-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(226, 232, 240, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.ri-alarm-control-status {
+  width: fit-content;
+  max-width: calc(100% - 50px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px;
+  border-radius: 999px;
+  background: rgba(254, 243, 199, 0.12);
+  border: 1px solid rgba(242, 210, 123, 0.24);
+  color: #fde68a;
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ri-alarm-control-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ri-alarm-red);
+  box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.13);
+}
+
+.ri-alarm-control-title {
+  margin: 4px 0 0;
+  color: #f8fafc;
+  font-size: clamp(1.55rem, 6.2vw, 2.45rem);
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-height: 3.15em;
+  overflow: hidden;
+  padding-right: 42px;
+}
+
+.ri-alarm-control-details {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  padding: 12px 13px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(226, 232, 240, 0.14);
+  color: var(--ri-alarm-muted);
+  font-size: 0.95rem;
+  font-weight: 850;
+}
+
+.ri-alarm-control-details strong {
+  color: #ffffff;
+  font-size: clamp(1.85rem, 8vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.ri-alarm-control-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  position: sticky;
+  bottom: 0;
+  padding-top: 3px;
+  background: linear-gradient(180deg, rgba(2,6,23,0), rgba(2,6,23,0.96) 42%);
+}
+
+.ri-alarm-control-button {
+  width: 100%;
+  min-height: 56px;
+  border: 0;
+  border-radius: 19px;
+  padding: 12px 10px;
+  font-size: 0.98rem;
+  line-height: 1.08;
+  font-weight: 950;
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.24);
+}
+
+.ri-alarm-control-button--snooze {
+  background: linear-gradient(135deg, #fff7cc, #f2d27b);
+  color: #78350f;
+}
+
+.ri-alarm-control-button--done {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #ffffff;
+}
+
+.ri-alarm-control-hint {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+@media (max-width: 420px) {
+  .ri-alarm-control-overlay { align-items: center; padding: 8px; }
+  .ri-alarm-control-card { width: 100%; border-radius: 26px; max-height: calc(100dvh - 16px); padding: 13px; gap: 8px; }
+  .ri-alarm-control-actions { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ri-alarm-control-title { max-height: 2.35em; font-size: clamp(1.38rem, 5.9vw, 2.05rem); }
+  .ri-alarm-control-button { min-height: 52px; padding: 10px 8px; font-size: 0.9rem; }
+  .ri-alarm-control-details { padding: 11px; }
+  .ri-alarm-control-details strong { font-size: clamp(1.75rem, 7.6vw, 2.35rem); }
+}

@@ -1,0 +1,29 @@
+RemindIQ Sprint Alarm-3C: Draft Rename + Change Mode Fix
+
+Issue fixed
+- During confirmation, tester said "change something" and then "name the alarm as executive in study time".
+- MiniViktor rejected the naming phrase as unrelated instead of updating the active draft.
+
+Changes
+1. Change mode now preserves the active draft instead of clearing it.
+2. Supported title/name update phrases during confirmation:
+   - name it <title>
+   - name the alarm as <title>
+   - name the reminder as <title>
+   - call it <title>
+   - call the alarm as <title>
+   - save it as <title>
+   - title it <title>
+3. Related-input guard now treats name/rename/title/alarm phrases as related to the draft.
+4. Generic alarm confirmation wording improved:
+   - "Perfect — your alarm is set for ..."
+   - Not "Perfect — Alarm, ..."
+5. Confirmation prompt now uses "adjust it" wording consistently.
+
+Test flow
+1. Create: "a daily reminder for 9:00 a.m."
+2. Say: "change something"
+3. Say: "name the alarm as executive study time"
+4. Expected: draft task/title updates to "executive study time" and remains ready to save.
+5. Say: "save it"
+6. Expected saved reminder/alarm title is "executive study time".

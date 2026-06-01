@@ -1,0 +1,305 @@
+package com.remindiq.app;
+
+import android.app.AlarmManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.media.AudioAttributes;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
+
+import androidx.core.app.NotificationManagerCompat;
+
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+import java.time.Instant;
+
+@CapacitorPlugin(name = "RemindIqNativeAlarm")
+public class RemindIqNativeAlarmPlugin extends Plugin {
+    // RemindIQ 3N.12.3 syntax repair: native action constants.
+    private static final String ACTION_FIRE_ALARM = "remindiq.action.FIRE_NATIVE_ALARM";
+    private static final String ACTION_STOP = "remindiq.action.STOP_NATIVE_ALARM";
+
+    // RemindIQ 3N.12.3 syntax repair: native action constants.
+
+    // RemindIQ 3N.12.1 build hotfix: action constants used by this plugin.
+
+  public static final String CHANNEL_ID = "remindiq_native_alarm_actions_v8";
+  public static final String PREFS = "remindiq_native_alarm_prefs";
+
+  @Override
+  public void load() {
+    createAlarmChannel(getContext());
+  }
+
+  @PluginMethod
+  public void scheduleAlarm(PluginCall call) {
+    String id = call.getString("id", "remindiq_alarm");
+    String title = call.getString("title", "RemindIQ reminder");
+    String body = call.getString("body", title);
+    String dueAt = call.getString("dueAt", null);
+    String repeatKind = call.getString("repeatKind", "none");
+    Integer repeatIntervalMinutes = call.getInt("repeatIntervalMinutes", 0);
+    String repeatDaysOfWeek = call.getString("repeatDaysOfWeek", "");
+    String repeatLabel = call.getString("repeatLabel", "");
+    String repeatEndDateISO = call.getString("repeatEndDateISO", "");
+
+    if (dueAt == null) {
+      call.reject("dueAt is required");
+      return;
+    }
+
+    long triggerAt;
+    try {
+      triggerAt = Instant.parse(dueAt).toEpochMilli();
+    } catch (Exception ex) {
+      call.reject("Invalid dueAt ISO datetime", ex);
+      return;
+    }
+
+    if (triggerAt <= System.currentTimeMillis()) {
+      call.reject("Cannot schedule a past alarm");
+      return;
+    }
+
+    Context context = getContext();
+    createAlarmChannel(context);
+
+    Intent receiverIntent = new Intent(context, RemindIqAlarmReceiver.class);
+    receiverIntent.setAction(ACTION_FIRE_ALARM);
+    receiverIntent.putExtra("id", id);
+    receiverIntent.putExtra("title", title);
+    receiverIntent.putExtra("body", body);
+    receiverIntent.putExtra("repeatKind", repeatKind);
+    receiverIntent.putExtra("repeatIntervalMinutes", repeatIntervalMinutes == null ? 0 : repeatIntervalMinutes);
+    receiverIntent.putExtra("repeatDaysOfWeek", repeatDaysOfWeek);
+    receiverIntent.putExtra("repeatLabel", repeatLabel);
+    receiverIntent.putExtra("repeatEndDateISO", repeatEndDateISO);
+
+    int requestCode = Math.abs(id.hashCode());
+    PendingIntent firePendingIntent = PendingIntent.getBroadcast(
+      context,
+      requestCode,
+      receiverIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+    );
+
+    Intent showIntent = new Intent(context, RemindIqAlarmActivity.class);
+    showIntent.putExtra("id", id);
+    showIntent.putExtra("title", title);
+    showIntent.putExtra("body", body);
+    showIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    PendingIntent showPendingIntent = PendingIntent.getActivity(
+      context,
+      Math.abs((id + "_show").hashCode()),
+      showIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+    );
+
+    AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+    boolean exactAllowed = true;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      exactAllowed = alarmManager.canScheduleExactAlarms();
+    }
+
+    boolean usedAlarmClock = false;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+      // Sprint 3N.4: use AlarmClockInfo for alarm-class scheduling. This is more reliable
+      // for closed/background app states than a webview timer or LocalNotifications fallback.
+      AlarmManager.AlarmClockInfo info = new AlarmManager.AlarmClockInfo(triggerAt, showPendingIntent);
+      alarmManager.setAlarmClock(info, firePendingIntent);
+      usedAlarmClock = true;
+    } else {
+      alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, firePendingIntent);
+    }
+
+    SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    prefs.edit()
+      .putString("lastScheduledId", id)
+      .putString("lastScheduledTitle", title)
+      .putLong("lastScheduledAtEpochMs", triggerAt)
+      .putLong("lastScheduleCallEpochMs", System.currentTimeMillis())
+      .putBoolean("lastScheduleUsedAlarmClock", usedAlarmClock)
+      .apply();
+
+    JSObject result = buildCapabilityResult(context);
+    result.put("scheduled", true);
+    result.put("exactAllowed", exactAllowed);
+    result.put("usedAlarmClock", usedAlarmClock);
+    result.put("scheduledAtEpochMs", triggerAt);
+    result.put("channelId", CHANNEL_ID);
+    call.resolve(result);
+  }
+
+  @PluginMethod
+  public void getAlarmCapability(PluginCall call) {
+    JSObject result = buildCapabilityResult(getContext());
+    call.resolve(result);
+  }
+
+  @PluginMethod
+  public void openFullScreenIntentSettings(PluginCall call) {
+    try {
+      Intent intent;
+      if (Build.VERSION.SDK_INT >= 34) {
+        intent = new Intent("android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT");
+        intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+      } else {
+        intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+      }
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      getContext().startActivity(intent);
+    } catch (Exception ignored) {}
+    JSObject result = new JSObject();
+    result.put("opened", true);
+    call.resolve(result);
+  }
+
+  @PluginMethod
+  public void openExactAlarmSettings(PluginCall call) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+      intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      getContext().startActivity(intent);
+    }
+    JSObject result = new JSObject();
+    result.put("opened", true);
+    call.resolve(result);
+  }
+
+  @PluginMethod
+  public void cancelAlarm(PluginCall call) {
+    String id = call.getString("id", null);
+    if (id == null) {
+      call.reject("id is required");
+      return;
+    }
+
+    Context context = getContext();
+    Intent intent = new Intent(context, RemindIqAlarmReceiver.class);
+    intent.setAction(ACTION_FIRE_ALARM);
+    int requestCode = Math.abs(id.hashCode());
+    PendingIntent pendingIntent = PendingIntent.getBroadcast(
+      context,
+      requestCode,
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+    );
+    PendingIntent repeatPendingIntent = PendingIntent.getBroadcast(
+      context,
+      Math.abs((id + "_repeat").hashCode()),
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+    );
+    AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+    alarmManager.cancel(pendingIntent);
+    alarmManager.cancel(repeatPendingIntent);
+
+    try {
+      NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+      manager.cancel(Math.abs(id.hashCode()));
+    } catch (Exception ignored) {}
+
+    JSObject result = new JSObject();
+    result.put("cancelled", true);
+    call.resolve(result);
+  }
+
+  @PluginMethod
+  public void stopRinging(PluginCall call) {
+    try {
+      Intent stopIntent = new Intent(getContext(), RemindIqRingingService.class);
+      stopIntent.setAction(ACTION_STOP);
+      getContext().startService(stopIntent);
+      NotificationManager manager = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+      manager.cancelAll();
+    } catch (Exception ignored) {}
+
+    JSObject result = new JSObject();
+    result.put("stopped", true);
+    call.resolve(result);
+  }
+
+  private JSObject buildCapabilityResult(Context context) {
+    createAlarmChannel(context);
+    JSObject result = new JSObject();
+    boolean notificationsAllowed = true;
+    try {
+      notificationsAllowed = NotificationManagerCompat.from(context).areNotificationsEnabled();
+    } catch (Exception ignored) {}
+
+    boolean exactAllowed = true;
+    try {
+      AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        exactAllowed = alarmManager.canScheduleExactAlarms();
+      }
+    } catch (Exception ignored) {}
+
+    boolean fullScreenAllowed = true;
+    boolean fullScreenCheckAvailable = false;
+    try {
+      if (Build.VERSION.SDK_INT >= 34) {
+        NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        fullScreenAllowed = manager.canUseFullScreenIntent();
+        fullScreenCheckAvailable = true;
+      }
+    } catch (Exception ignored) {}
+
+    SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    result.put("notificationsAllowed", notificationsAllowed);
+    result.put("exactAllowed", exactAllowed);
+    result.put("fullScreenIntentAllowed", fullScreenAllowed);
+    result.put("fullScreenCheckAvailable", fullScreenCheckAvailable);
+    result.put("channelId", CHANNEL_ID);
+    result.put("sdkInt", Build.VERSION.SDK_INT);
+    result.put("lastScheduledId", prefs.getString("lastScheduledId", ""));
+    result.put("lastScheduledTitle", prefs.getString("lastScheduledTitle", ""));
+    result.put("lastScheduledAtEpochMs", prefs.getLong("lastScheduledAtEpochMs", 0L));
+    result.put("lastScheduleCallEpochMs", prefs.getLong("lastScheduleCallEpochMs", 0L));
+    result.put("lastScheduleUsedAlarmClock", prefs.getBoolean("lastScheduleUsedAlarmClock", false));
+    result.put("lastReceiverFiredAtEpochMs", prefs.getLong("lastReceiverFiredAtEpochMs", 0L));
+    result.put("lastReceiverFiredId", prefs.getString("lastReceiverFiredId", ""));
+    result.put("lastNativeAction", prefs.getString("lastNativeAction", ""));
+    result.put("lastNativeActionAtEpochMs", prefs.getLong("lastNativeActionAtEpochMs", 0L));
+    return result;
+  }
+
+  static void createAlarmChannel(Context context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+    NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+    NotificationChannel existing = manager.getNotificationChannel(CHANNEL_ID);
+    if (existing != null) return;
+
+    AudioAttributes attributes = new AudioAttributes.Builder()
+      .setUsage(AudioAttributes.USAGE_ALARM)
+      .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+      .build();
+
+    NotificationChannel channel = new NotificationChannel(
+      CHANNEL_ID,
+      "RemindIQ Native Alarm Scheduler v8",
+      NotificationManager.IMPORTANCE_HIGH
+    );
+    channel.setDescription("Native RemindIQ alarm notifications with one Snooze/Done control surface.");
+    channel.enableVibration(true);
+    channel.setSound(null, attributes);
+    channel.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
+    channel.setBypassDnd(true);
+    manager.createNotificationChannel(channel);
+  }
+}
+
+
+
+

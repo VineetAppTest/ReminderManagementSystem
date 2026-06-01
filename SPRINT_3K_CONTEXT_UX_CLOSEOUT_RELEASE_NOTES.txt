@@ -1,0 +1,38 @@
+RemindIQ Sprint Alarm 3K - MiniViktor Context UX Closeout
+Build: RemindIQ-Sprint-Alarm-3K-MiniViktor-Context-UX-Closeout.zip
+
+Included over Sprint 3J:
+1. Context-aware fallback handling
+   - Replaced the hard fallback "I don't think this is related..." with a guided clarification prompt.
+   - MiniViktor now asks whether the user wants to rename, change time, change repeat, save, or cancel.
+
+2. Cancel/clear draft language hardening
+   - Expanded support for scrap that / never mind / drop it / ignore it / delete it / remove it / start over style phrases.
+   - Draft clearing now responds with a clean reset message.
+
+3. Rename/edit recovery
+   - Ready-to-save drafts now accept name/title edits such as "name the alarm as executive study time" without requiring the separate Change button.
+   - Bare task rename remains supported when the user enters change mode.
+
+4. Repeat and relative timing recovery
+   - In a pending repeat flow, "today", "today only", and related variants can now resolve a today-only hourly repeat when the original draft already contains a relative start such as "1 minute from now".
+   - Relative phrases such as "1 minute from now" are refreshed at save time so delayed confirmation does not incorrectly fail as past time.
+
+5. Voice-recognition artifacts
+   - Continues support for common Google mic misrecognitions such as "repeats everyone", "receives every one", and related repeat-hourly variants.
+
+6. Alarm UX closure retained
+   - Full-screen alarm readability improvements from 3I/3J retained.
+   - Snooze, Done, and Stop repeat controls remain embedded on the full-screen alarm.
+   - Audio cleanup hooks retained for Done, Snooze, dismiss/background/pagehide.
+
+Recommended validation:
+1. npm.cmd run build
+2. Standard regression
+3. Corpus regression
+4. Manual flows:
+   - create a reminder -> scrap that
+   - daily alarm at 9 am -> name the alarm as executive study time
+   - set a repeat reminder -> repetition should be after 1 hour and alarm is for 1 minute from now -> save
+   - create repeating alarm 1 minute from now receives every one for today only -> save
+   - long-title alarm full-screen readability + Snooze + Done

@@ -1,0 +1,100 @@
+import { Capacitor, registerPlugin } from "@capacitor/core";
+
+type NativeAlarmPlugin3N12_5 = {
+  scheduleAlarm(payload: {
+    id: string;
+    title: string;
+    body?: string;
+    dueAt: string;
+    timeText?: string;
+    category?: string;
+  }): Promise<any>;
+  getAlarmCapability(): Promise<any>;
+};
+
+const RemindIqNativeAlarm = registerPlugin<NativeAlarmPlugin3N12_5>("RemindIqNativeAlarm");
+
+export type ReminderLike3N12_5 = {
+  id?: string;
+  title?: string;
+  task?: string;
+  body?: string;
+  rawText?: string;
+  dueAt?: string | null;
+  timeText?: string;
+  eventTimeText?: string;
+  category?: string;
+  alerts?: Array<{
+    dueAt?: string | null;
+    timeText?: string;
+  }>;
+};
+
+function resolveReminderId(reminder: ReminderLike3N12_5): string {
+  return reminder.id || `remindiq_${Date.now()}`;
+}
+
+function resolveTitle(reminder: ReminderLike3N12_5): string {
+  return (
+    reminder.title ||
+    reminder.task ||
+    reminder.rawText ||
+    "RemindIQ reminder"
+  ).trim();
+}
+
+function resolveDueAt(reminder: ReminderLike3N12_5): string | null {
+  return reminder.dueAt || reminder.alerts?.[0]?.dueAt || null;
+}
+
+function resolveTimeText(reminder: ReminderLike3N12_5): string {
+  return reminder.timeText || reminder.alerts?.[0]?.timeText || "";
+}
+
+export async function scheduleNativeReminderAlarm3N12_5(
+  reminder: ReminderLike3N12_5
+): Promise<any> {
+  if (!Capacitor.isNativePlatform()) {
+    console.warn("[3N.12.5] Native alarm skipped because app is not running on native platform.");
+    return { skipped: true, reason: "not_native_platform" };
+  }
+
+  const id = resolveReminderId(reminder);
+  const title = resolveTitle(reminder);
+  const dueAt = resolveDueAt(reminder);
+  const timeText = resolveTimeText(reminder);
+  const category = reminder.category || "General";
+
+  if (!dueAt) {
+    console.error("[3N.12.5] Native alarm not scheduled: missing dueAt", reminder);
+    return { skipped: true, reason: "missing_dueAt" };
+  }
+
+  const payload = {
+    id,
+    title,
+    body: reminder.body || `${title}${timeText ? ` · ${timeText}` : ""}`,
+    dueAt,
+    timeText,
+    category,
+  };
+
+  console.log("[3N.12.5] Calling native scheduleAlarm", payload);
+
+  const result = await RemindIqNativeAlarm.scheduleAlarm(payload);
+
+  console.log("[3N.12.5] Native scheduleAlarm result", result);
+
+  return result;
+}
+
+export async function getNativeAlarmCapability3N12_5(): Promise<any> {
+  if (!Capacitor.isNativePlatform()) {
+    return { skipped: true, reason: "not_native_platform" };
+  }
+
+  const result = await RemindIqNativeAlarm.getAlarmCapability();
+  console.log("[3N.12.5] Native alarm capability", result);
+  return result;
+}
+

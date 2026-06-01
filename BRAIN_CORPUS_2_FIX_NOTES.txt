@@ -1,0 +1,39 @@
+RemindIQ Sprint Brain-Corpus-2: Corpus-Driven Regression + Retriever Wiring
+Fix package generated from uploaded source-only project.
+
+What was fixed in this merged build:
+1. Added missing App.tsx handlers:
+   - handleCopyCorpusReport
+   - handleCopyCorpusJsonl
+2. Kept exportMiniViktorCorpusAsJsonl wired and used, removing the unused import build failure.
+3. Updated MiniViktorReminderCorpus type to allow the corpus schema metadata field.
+4. Verified npm.cmd run build equivalent through npm run build.
+5. Ran Capacitor sync for Android assets.
+
+Sprint features present:
+1. Corpus JSON is bundled under public/brain/mini-viktor-reminder-corpus.json.
+2. Corpus TypeScript data is bundled under src/brain/miniViktorReminderCorpusData.ts.
+3. Corpus examples are wired into the retriever source.
+4. Corpus-derived regression is available in the Tests tab.
+5. Corpus summary is visible in the Tests tab.
+6. Copy corpus report and copy corpus JSONL actions are available.
+7. Dataset export includes regression + corpus examples.
+
+Hard rule:
+Corpus can suggest. Guardrails decide.
+
+Local verification completed:
+- npm run build: PASS
+- npx cap sync android: PASS
+
+After replacing your local folder, run:
+npm.cmd install
+npm.cmd run build
+npx.cmd cap sync android
+npx.cmd cap open android
+
+Mandatory app checks:
+1. Tests > Run regression
+2. Tests > Run corpus regression
+3. Tests > Build dataset export
+4. Tests > Copy corpus JSONL

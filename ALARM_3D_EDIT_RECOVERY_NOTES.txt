@@ -1,0 +1,42 @@
+RemindIQ Sprint Alarm-3D: Edit Recovery + Past Alert Repair
+
+Purpose
+- Fix beta feedback where the user says "adjusted", "change it", or a short corrected task like "call Raj" and MiniViktor rejects it as unrelated.
+- Fix recovery from a multi-reminder draft where one alert time has already passed and the user tries to replace that alert time.
+
+What changed
+1. Added "adjusted" as a valid change/edit intent.
+2. Added a draft change mode after the user says change/adjust/edit.
+3. In change mode, short text such as "call Raj" updates the active draft title/task instead of being rejected.
+4. Naming phrases continue to work:
+   - name it study time
+   - name the alarm as executive study time
+   - call it call Raj
+   - title it focus block
+5. If a draft has a past reminder alert, a follow-up like "make it 10:00 pm" updates the past alert instead of restarting the conversation.
+6. Confirmation wording now reflects edited reminders and multiple-reminder drafts more clearly.
+
+Validation
+- npm run build passed.
+- npx cap sync android passed.
+
+Manual UAT flows
+1. call last tomorrow at 8:00 p.m.
+   adjusted
+   call Raj
+   save reminder
+
+Expected: saves "call Raj" tomorrow at 8:00 pm.
+
+2. meeting tomorrow 8:00 p.m. remind me today at 7:00 p.m. and tomorrow at 6:00 p.m.
+   make it 10:00 p.m.
+   save it
+
+Expected: updates the past today-at-7 reminder to today at 10:00 pm and keeps the tomorrow reminder/event.
+
+3. a daily reminder for 9:00 a.m.
+   change something
+   name the alarm as executive study time
+   save it
+
+Expected: saves as "executive study time" with daily repeat at 9:00 am.

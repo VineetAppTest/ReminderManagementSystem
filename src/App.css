@@ -133,6 +133,7 @@ html, body, #root {
 
 .chat-thread {
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -142,6 +143,7 @@ html, body, #root {
 .message-row {
   display: flex;
   width: 100%;
+  min-width: 0;
 }
 
 .user-row {
@@ -155,6 +157,11 @@ html, body, #root {
 .message-bubble {
   width: fit-content;
   max-width: min(86%, 560px);
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
   border-radius: 22px;
   padding: 12px 14px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
@@ -185,11 +192,17 @@ html, body, #root {
   margin: 0;
   line-height: 1.5;
   font-weight: 650;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .action-bubble {
   width: fit-content;
   max-width: min(92%, 620px);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -282,6 +295,8 @@ textarea:focus,
   color: #cbd5e1;
   margin: 8px 0 0;
   font-size: 13px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .list-card {
@@ -576,6 +591,8 @@ textarea:focus,
     padding: 8px 10px;
     border-radius: 16px;
     font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .message-name {
@@ -1459,4 +1476,1588 @@ textarea:focus,
     padding: 4px 7px;
     font-size: 11px;
   }
+}
+
+/* Sprint Alarm-2A + Voice-1D: ringing alert, full-screen mobile tabs, spoken MiniViktor */
+.mobile-main-tabs {
+  display: none;
+}
+
+.side-panel-tabs {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.tests-panel-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 7px;
+    padding: 7px;
+  }
+
+  .mobile-main-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    order: 0;
+  }
+
+  .main-tab {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 8px 4px;
+    background: rgba(255, 255, 255, 0.07);
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 950;
+  }
+
+  .main-tab.active {
+    color: #111827;
+    background: linear-gradient(135deg, #b98a28, #f2d27b);
+    border-color: rgba(242, 210, 123, 0.7);
+  }
+
+  .conversation-shell,
+  .list-card {
+    display: none;
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+  }
+
+  .conversation-shell.active-mobile-section,
+  .list-card.active-mobile-section {
+    display: flex;
+  }
+
+  .conversation-shell.active-mobile-section,
+  .list-card.active-mobile-section {
+    grid-row: 2;
+  }
+
+  .app-header {
+    flex-shrink: 0;
+  }
+
+  .chat-panel,
+  .side-panel-body,
+  .tests-panel-body,
+  .reminders-panel-body,
+  .feedback-panel-body {
+    min-height: 0;
+    flex: 1;
+  }
+
+  .side-panel-tabs {
+    display: none;
+  }
+
+  .list-card {
+    overflow: hidden;
+  }
+
+  .reminder-list,
+  .inline-feedback,
+  .tests-panel-body {
+    max-height: none;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .voice-loop-hint {
+    font-size: 11px;
+    margin-top: 5px;
+  }
+
+  .voice-message {
+    font-size: 11px;
+    margin-top: 5px;
+  }
+}
+
+/* Sprint Alarm-3A: repeating alarm visibility and stop control */
+.repeat-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(247, 185, 85, 0.16);
+  border: 1px solid rgba(247, 185, 85, 0.42);
+  color: #f8d38b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.repeat-line {
+  color: #f8d38b;
+  font-weight: 800;
+}
+
+.stop-repeat-button {
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  background: rgba(127, 29, 29, 0.85);
+  color: #fff7ed;
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.stop-repeat-button:hover {
+  background: rgba(185, 28, 28, 0.95);
+}
+
+/* Sprint Alarm-3F: long voice/chat phrases must never stretch the mobile viewport. */
+.chat-thread, .composer, .voice-message, .voice-transcript-review, .message-bubble, .message-bubble p {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Sprint Alarm-3G: mobile overflow guard + full-screen ringing alarm controls */
+html,
+body,
+#root,
+.app-shell {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.chat-panel,
+.chat-thread,
+.message-row,
+.message-bubble,
+.message-bubble p,
+.voice-message,
+.voice-transcript-review,
+.voice-transcript-review span,
+.composer,
+.text-input {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.message-bubble p,
+.voice-message,
+.voice-transcript-review span {
+  white-space: normal;
+}
+
+.user-row,
+.assistant-row {
+  min-width: 0;
+}
+
+.user-bubble,
+.assistant-bubble {
+  max-width: min(92%, 720px);
+}
+
+.ringing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(242, 210, 123, 0.28), transparent 28%),
+    radial-gradient(circle at 85% 18%, rgba(90, 120, 255, 0.22), transparent 30%),
+    linear-gradient(160deg, #030712 0%, #101827 48%, #1e1b4b 100%);
+  color: #fff7ed;
+}
+
+.ringing-card {
+  width: min(440px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 30px;
+  padding: 28px 22px 22px;
+  background: rgba(8, 13, 29, 0.86);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  text-align: center;
+  backdrop-filter: blur(18px);
+}
+
+.ringing-brand {
+  display: inline-flex;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: rgba(242, 210, 123, 0.16);
+  border: 1px solid rgba(242, 210, 123, 0.42);
+  color: #fde68a;
+  font-weight: 950;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.ringing-card h1 {
+  margin: 0;
+  font-size: clamp(30px, 9vw, 46px);
+  line-height: 1.06;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.ringing-time {
+  margin: 18px 0 8px;
+  color: #fde68a;
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.ringing-event,
+.ringing-repeat {
+  margin: 8px 0 0;
+  color: #dbeafe;
+  font-weight: 800;
+}
+
+.ringing-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ringing-snooze,
+.ringing-done {
+  min-height: 54px;
+  border: 0;
+  border-radius: 18px;
+  font-size: 16px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.ringing-snooze {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.ringing-done {
+  color: #111827;
+  background: linear-gradient(135deg, #facc15, #f2d27b);
+  box-shadow: 0 16px 34px rgba(250, 204, 21, 0.24);
+}
+
+@media (max-width: 720px) {
+  .user-bubble,
+  .assistant-bubble {
+    max-width: 94%;
+  }
+
+  .message-bubble p {
+    font-size: 14px;
+    line-height: 1.38;
+  }
+
+  .ringing-overlay {
+    padding: 18px;
+  }
+
+  .ringing-card {
+    border-radius: 26px;
+    padding: 26px 18px 18px;
+  }
+}
+
+/* Sprint Alarm-3H: premium readable full-screen alarm with in-screen controls. */
+.ringing-overlay {
+  padding: max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at 18% 8%, rgba(250, 204, 21, 0.34), transparent 25%),
+    radial-gradient(circle at 88% 16%, rgba(20, 184, 166, 0.2), transparent 28%),
+    radial-gradient(circle at 50% 100%, rgba(59, 130, 246, 0.26), transparent 32%),
+    linear-gradient(150deg, #020617 0%, #0f172a 45%, #111827 100%);
+  overflow: hidden;
+}
+
+.ringing-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.ringing-card {
+  position: relative;
+  width: min(500px, 100%);
+  max-height: min(92vh, 760px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 26px 20px 22px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.94)),
+    rgba(2, 6, 23, 0.96);
+  border: 1px solid rgba(253, 230, 138, 0.24);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  overflow: hidden;
+}
+
+.ringing-icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #facc15, #fb923c);
+  box-shadow: 0 18px 40px rgba(251, 146, 60, 0.26);
+  font-size: 32px;
+}
+
+.ringing-brand {
+  margin-bottom: 4px;
+  background: rgba(250, 204, 21, 0.12);
+  border-color: rgba(250, 204, 21, 0.34);
+  color: #fef3c7;
+}
+
+.ringing-card h1 {
+  width: 100%;
+  max-height: 5.2em;
+  margin: 4px 0 0;
+  padding: 0 2px;
+  color: #ffffff;
+  font-size: clamp(26px, 7.5vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-align: center;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-wrap: balance;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ringing-time {
+  margin: 8px 0 2px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: rgba(253, 230, 138, 0.12);
+  border: 1px solid rgba(253, 230, 138, 0.22);
+  color: #fde68a;
+  font-size: clamp(20px, 5.5vw, 28px);
+  font-weight: 950;
+}
+
+.ringing-event,
+.ringing-repeat {
+  max-width: 100%;
+  margin: 2px 0 0;
+  color: #e0f2fe;
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.ringing-actions {
+  width: 100%;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.ringing-actions.repeat-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.ringing-actions.repeat-actions .ringing-stop {
+  grid-column: 1 / -1;
+}
+
+.ringing-snooze,
+.ringing-done,
+.ringing-stop {
+  min-height: 58px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 950;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ringing-snooze {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.ringing-done {
+  color: #0f172a;
+  background: linear-gradient(135deg, #fef08a, #facc15, #fb923c);
+  box-shadow: 0 18px 42px rgba(250, 204, 21, 0.26);
+}
+
+.ringing-stop {
+  border: 1px solid rgba(248, 113, 113, 0.36);
+  background: rgba(127, 29, 29, 0.72);
+  color: #fff7ed;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .ringing-card {
+    width: 100%;
+    max-height: calc(100vh - 34px);
+    border-radius: 30px;
+    padding: 24px 16px 16px;
+  }
+
+  .ringing-card h1 {
+    max-height: 4.4em;
+    font-size: clamp(24px, 8vw, 36px);
+  }
+
+  .ringing-actions {
+    position: sticky;
+    bottom: 0;
+    margin-top: 16px;
+    padding-top: 4px;
+  }
+}
+
+/* Sprint Alarm-3I P0: final alarm readability, embedded controls, audio-dismiss safety, compact cards. */
+.reminder-item {
+  align-items: flex-start;
+  min-height: auto;
+  padding: 10px 11px;
+}
+
+.reminder-main {
+  min-width: 0;
+}
+
+.reminder-item h3 {
+  margin: 4px 0 5px;
+  font-size: 15px;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+
+.reminder-when,
+.reminder-item p {
+  line-height: 1.28;
+}
+
+.next-line {
+  color: #c7d2fe !important;
+}
+
+.reminder-details {
+  margin-top: 6px;
+  color: #cbd5e1;
+}
+
+.reminder-details summary {
+  cursor: pointer;
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 900;
+  list-style: none;
+}
+
+.reminder-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.reminder-details p {
+  margin-top: 6px !important;
+  padding: 8px 9px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.42);
+  overflow-wrap: anywhere;
+}
+
+.repeat-chip {
+  padding: 3px 7px;
+}
+
+.item-actions {
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.item-actions button {
+  padding: 8px 9px;
+  min-height: 34px;
+}
+
+.ringing-overlay {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 18% 6%, rgba(253, 224, 71, 0.40), transparent 23%),
+    radial-gradient(circle at 92% 12%, rgba(45, 212, 191, 0.24), transparent 27%),
+    radial-gradient(circle at 50% 115%, rgba(96, 165, 250, 0.34), transparent 34%),
+    linear-gradient(155deg, #020617 0%, #07111f 42%, #111827 100%);
+}
+
+.ringing-card {
+  justify-content: space-between;
+  gap: 9px;
+  max-height: calc(100vh - 28px);
+  width: min(520px, 100%);
+  padding: 22px 17px 16px;
+  border-radius: 32px;
+  border: 1px solid rgba(254, 243, 199, 0.32);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.97)),
+    rgba(2, 6, 23, 0.98);
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.ringing-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+}
+
+.ringing-topline .ringing-brand {
+  margin: 0;
+}
+
+.ringing-topline .ringing-icon {
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 18px;
+  font-size: 26px;
+}
+
+.ringing-now-label {
+  margin: 4px 0 0;
+  color: #bae6fd;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ringing-title-panel {
+  width: 100%;
+  max-height: min(34vh, 220px);
+  overflow-y: auto;
+  border-radius: 24px;
+  padding: 14px 12px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-overflow-scrolling: touch;
+}
+
+.ringing-title-panel h1,
+.ringing-card h1 {
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  font-size: clamp(24px, 7.2vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  color: #ffffff;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.ringing-time {
+  margin: 2px 0 4px;
+  color: #0f172a;
+  background: linear-gradient(135deg, #fef08a, #facc15);
+  border: 0;
+  box-shadow: 0 16px 34px rgba(250, 204, 21, 0.18);
+}
+
+.ringing-event,
+.ringing-repeat {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: #e0f2fe;
+}
+
+.ringing-actions {
+  position: relative;
+  bottom: auto;
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 0;
+}
+
+.ringing-actions.repeat-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.ringing-actions.repeat-actions .ringing-stop {
+  grid-column: 1 / -1;
+}
+
+.ringing-snooze,
+.ringing-done,
+.ringing-stop {
+  min-height: 56px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.1;
+  touch-action: manipulation;
+}
+
+.ringing-done {
+  color: #031019;
+  background: linear-gradient(135deg, #bbf7d0, #22c55e);
+  box-shadow: 0 18px 42px rgba(34, 197, 94, 0.28);
+}
+
+.ringing-snooze {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255,255,255,0.32);
+}
+
+.ringing-stop {
+  background: linear-gradient(135deg, #991b1b, #7f1d1d);
+  border: 1px solid rgba(254, 202, 202, 0.32);
+}
+
+@media (max-width: 720px) {
+  .reminder-item {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .item-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .item-actions button,
+  .item-actions .stop-repeat-button {
+    width: 100%;
+  }
+
+  .ringing-card {
+    min-height: min(680px, calc(100vh - 28px));
+    padding: 18px 14px 14px;
+  }
+
+  .ringing-title-panel {
+    max-height: 30vh;
+    padding: 12px 10px;
+  }
+
+  .ringing-title-panel h1,
+  .ringing-card h1 {
+    font-size: clamp(22px, 7.5vw, 34px);
+  }
+
+  .ringing-actions,
+  .ringing-actions.repeat-actions {
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    bottom: auto;
+  }
+
+  .ringing-actions.repeat-actions .ringing-stop {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Sprint Alarm-3L: full-screen alarm UX closeout + dynamic reminder cards. */
+.ringing-overlay {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(250, 204, 21, 0.46), transparent 24%),
+    radial-gradient(circle at 86% 12%, rgba(45, 212, 191, 0.30), transparent 28%),
+    radial-gradient(circle at 50% 110%, rgba(99, 102, 241, 0.42), transparent 36%),
+    linear-gradient(155deg, #020617 0%, #08111f 44%, #111827 100%) !important;
+  place-items: stretch center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ringing-card {
+  align-self: center;
+  min-height: auto !important;
+  max-height: calc(100dvh - 28px) !important;
+  width: min(540px, calc(100vw - 24px)) !important;
+  display: grid !important;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto;
+  gap: 10px !important;
+  border-radius: 34px !important;
+  padding: 20px 16px 16px !important;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.99), rgba(2, 6, 23, 0.98)),
+    #020617 !important;
+  border: 1px solid rgba(254, 243, 199, 0.36) !important;
+  box-shadow: 0 34px 120px rgba(0, 0, 0, 0.82), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+.ringing-title-panel {
+  min-height: 96px;
+  max-height: min(32dvh, 230px) !important;
+  display: grid;
+  place-items: center;
+  padding: 14px 12px !important;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.86), rgba(15, 23, 42, 0.74)) !important;
+  border: 1px solid rgba(226, 232, 240, 0.18) !important;
+}
+
+.ringing-title-panel h1,
+.ringing-card h1 {
+  width: 100%;
+  color: #ffffff !important;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
+  font-size: clamp(22px, 6.4vw, 42px) !important;
+  line-height: 1.1 !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  text-wrap: balance;
+}
+
+.ringing-time {
+  color: #0f172a !important;
+  background: linear-gradient(135deg, #fef3c7, #facc15) !important;
+  border: 1px solid rgba(254, 240, 138, 0.78) !important;
+}
+
+.ringing-event,
+.ringing-repeat {
+  color: #f8fafc !important;
+  background: rgba(15, 23, 42, 0.88) !important;
+  border: 1px solid rgba(226, 232, 240, 0.16) !important;
+}
+
+.ringing-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin-top: 4px !important;
+}
+
+.ringing-actions.repeat-actions .ringing-stop {
+  grid-column: 1 / -1;
+}
+
+.ringing-snooze,
+.ringing-done,
+.ringing-stop {
+  min-height: 58px !important;
+  border-radius: 20px !important;
+  font-weight: 950 !important;
+}
+
+.ringing-done {
+  color: #022c22 !important;
+  background: linear-gradient(135deg, #bbf7d0, #22c55e) !important;
+  border: 1px solid rgba(187, 247, 208, 0.70) !important;
+}
+
+.ringing-snooze {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.92)) !important;
+  border: 1px solid rgba(226, 232, 240, 0.30) !important;
+}
+
+.ringing-stop {
+  color: #fff7ed !important;
+  background: linear-gradient(135deg, #b91c1c, #7f1d1d) !important;
+  border: 1px solid rgba(254, 202, 202, 0.44) !important;
+}
+
+.reminder-item {
+  min-height: unset !important;
+  height: auto !important;
+  padding: 9px 10px !important;
+  gap: 9px !important;
+}
+
+.reminder-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.reminder-item h3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.reminder-when,
+.event-line,
+.next-line {
+  margin: 3px 0 !important;
+  font-size: 12.5px !important;
+  line-height: 1.25 !important;
+}
+
+.item-actions {
+  align-self: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px !important;
+}
+
+.item-actions button {
+  min-height: 32px !important;
+  padding: 7px 9px !important;
+  font-size: 12px !important;
+}
+
+@media (max-width: 720px) {
+  .ringing-overlay {
+    padding: max(12px, env(safe-area-inset-top)) 10px max(12px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .ringing-card {
+    width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - 22px) !important;
+    padding: 16px 12px 12px !important;
+    border-radius: 28px !important;
+  }
+
+  .ringing-title-panel {
+    min-height: 84px;
+    max-height: 28dvh !important;
+  }
+
+  .ringing-title-panel h1,
+  .ringing-card h1 {
+    font-size: clamp(20px, 7.4vw, 34px) !important;
+  }
+
+  .ringing-actions,
+  .ringing-actions.repeat-actions {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .ringing-snooze,
+  .ringing-done,
+  .ringing-stop {
+    min-height: 54px !important;
+    font-size: 14px !important;
+  }
+
+  .reminder-item {
+    padding: 8px 9px !important;
+  }
+
+  .item-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Sprint Alarm-3L Reminder List + Voice Polish: tighter cards, safer long text, clearer action hierarchy. */
+.reminders-panel-body .list-header {
+  gap: 10px;
+}
+
+.reminder-list {
+  gap: 8px !important;
+  max-height: 42vh !important;
+}
+
+.reminder-item {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  border: 1px solid rgba(226, 232, 240, 0.11) !important;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.48)) !important;
+}
+
+.reminder-item.done-item {
+  opacity: 0.68;
+}
+
+.status-line {
+  gap: 5px !important;
+  flex-wrap: wrap !important;
+}
+
+.category-chip,
+.repeat-chip {
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.reminder-item h3 {
+  margin: 5px 0 3px !important;
+  font-size: 15px !important;
+  line-height: 1.18 !important;
+  overflow-wrap: anywhere;
+}
+
+.reminder-when,
+.event-line,
+.next-line {
+  color: #dbeafe !important;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.repeat-line {
+  color: #fde68a !important;
+}
+
+.reminder-details {
+  margin-top: 5px;
+}
+
+.reminder-details summary {
+  cursor: pointer;
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.reminder-details p {
+  margin-top: 4px !important;
+  padding: 7px 8px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.34);
+  color: #cbd5e1 !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+}
+
+.item-actions {
+  justify-content: flex-end;
+  max-width: 132px;
+}
+
+.item-actions button {
+  border-radius: 999px !important;
+  min-height: 28px !important;
+  padding: 6px 8px !important;
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+}
+
+.stop-repeat-button {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .reminder-list {
+    max-height: 46vh !important;
+  }
+
+  .reminder-item {
+    grid-template-columns: 1fr !important;
+  }
+
+  .item-actions {
+    max-width: none;
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .item-actions .stop-repeat-button {
+    grid-column: 1 / -1;
+  }
+}
+
+.build-label {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.sync-status-card {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sync-status-card strong {
+  font-size: 0.92rem;
+}
+
+.sync-status-card span {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(247, 185, 85, 0.14);
+  color: #f7d18c;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.sync-status-card p,
+.sync-status-card small {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+
+/* Sprint 3N.3 — Compact reminder cards + readable action grouping */
+.alarm-diagnostic-text {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.reminder-list {
+  align-content: start !important;
+}
+
+.compact-reminder-item {
+  min-height: 0 !important;
+  height: auto !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 10px !important;
+  padding: 12px !important;
+  border-radius: 18px !important;
+}
+
+.compact-reminder-item .reminder-main {
+  min-width: 0 !important;
+}
+
+.compact-status-line {
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+.compact-status-line small,
+.compact-status-line .category-chip,
+.compact-status-line .repeat-chip {
+  font-size: 12.5px !important;
+  line-height: 1.1 !important;
+  padding: 5px 9px !important;
+  border-radius: 999px !important;
+  font-weight: 900 !important;
+}
+
+.compact-reminder-item h3 {
+  font-size: 16px !important;
+  line-height: 1.2 !important;
+  margin: 7px 0 4px !important;
+}
+
+.compact-reminder-item .reminder-when,
+.compact-reminder-item .event-line,
+.compact-reminder-item .next-line {
+  font-size: 13.5px !important;
+  line-height: 1.35 !important;
+  margin-top: 3px !important;
+}
+
+.compact-reminder-item .reminder-details {
+  margin-top: 6px !important;
+}
+
+.compact-reminder-item .reminder-details summary {
+  display: inline-flex !important;
+  min-height: 28px !important;
+  align-items: center !important;
+  padding: 4px 10px !important;
+  border-radius: 999px !important;
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+
+.compact-item-actions {
+  width: 100% !important;
+  max-width: none !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  justify-content: stretch !important;
+  align-items: center !important;
+  margin-top: 2px !important;
+}
+
+.compact-item-actions .stop-repeat-button {
+  grid-column: 1 / -1 !important;
+}
+
+.compact-item-actions button {
+  min-height: 38px !important;
+  height: auto !important;
+  width: 100% !important;
+  padding: 8px 10px !important;
+  font-size: 13px !important;
+  border-radius: 14px !important;
+  line-height: 1.1 !important;
+}
+
+.feedback-diagnostics-card span {
+  color: #e2e8f0;
+  font-weight: 850;
+}
+
+@media (min-width: 721px) {
+  .compact-reminder-item {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+  }
+  .compact-item-actions {
+    width: 320px !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Sprint 3N.5 — hard fix for overlapping reminder cards and sparse action layout */
+.reminders-panel-body .reminder-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  align-content: stretch !important;
+  overflow-y: auto !important;
+  padding: 2px 2px 12px !important;
+}
+
+.reminders-panel-body .reminder-item,
+.reminders-panel-body .compact-reminder-item,
+.reminders-panel-body .alarm-reminder-item {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  gap: 8px !important;
+  padding: 12px 12px 10px !important;
+  border-radius: 18px !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+}
+
+.reminders-panel-body .reminder-main {
+  width: 100% !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+.reminders-panel-body .compact-status-line,
+.reminders-panel-body .status-line {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 7px !important;
+  min-height: 26px !important;
+}
+
+.reminders-panel-body .compact-status-line small,
+.reminders-panel-body .category-chip,
+.reminders-panel-body .repeat-chip {
+  font-size: 13px !important;
+  line-height: 1 !important;
+  padding: 6px 10px !important;
+  min-height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-weight: 900 !important;
+}
+
+.reminders-panel-body .status-dot {
+  width: 9px !important;
+  height: 9px !important;
+  flex: 0 0 9px !important;
+}
+
+.reminders-panel-body .reminder-item h3 {
+  margin: 6px 0 4px !important;
+  font-size: 17px !important;
+  line-height: 1.18 !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+}
+
+.reminders-panel-body .reminder-item.done-item h3 {
+  text-decoration-thickness: 2px !important;
+}
+
+.reminders-panel-body .reminder-when,
+.reminders-panel-body .event-line,
+.reminders-panel-body .next-line {
+  margin: 3px 0 !important;
+  font-size: 14px !important;
+  line-height: 1.28 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.reminders-panel-body .reminder-details {
+  display: block !important;
+  position: static !important;
+  margin: 7px 0 0 !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+}
+
+.reminders-panel-body .reminder-details summary {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 30px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+.reminders-panel-body .item-actions,
+.reminders-panel-body .compact-item-actions {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  float: none !important;
+  clear: both !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  margin: 7px 0 0 !important;
+  padding: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+.reminders-panel-body .item-actions .stop-repeat-button,
+.reminders-panel-body .compact-item-actions .stop-repeat-button {
+  grid-column: 1 / -1 !important;
+}
+
+.reminders-panel-body .item-actions button,
+.reminders-panel-body .compact-item-actions button {
+  position: static !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 40px !important;
+  height: auto !important;
+  padding: 9px 10px !important;
+  border-radius: 16px !important;
+  font-size: 13.5px !important;
+  line-height: 1.1 !important;
+  font-weight: 900 !important;
+  white-space: normal !important;
+}
+
+@media (max-width: 420px) {
+  .reminders-panel-body .item-actions,
+  .reminders-panel-body .compact-item-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .reminders-panel-body .item-actions button,
+  .reminders-panel-body .compact-item-actions button {
+    min-height: 38px !important;
+    font-size: 12.5px !important;
+    padding: 8px 6px !important;
+  }
+}
+
+/* Sprint 3N.6 — definitive reminder card fit fix
+   Purpose: card height must be content-driven, action buttons must stay visible,
+   and no details/action row may be clipped inside the card. */
+.reminders-panel-body {
+  overflow: hidden !important;
+}
+
+.reminders-panel-body .reminder-list {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 2px 3px 16px !important;
+  scroll-padding-bottom: 18px !important;
+}
+
+.reminders-panel-body .reminder-item,
+.reminders-panel-body .compact-reminder-item,
+.reminders-panel-body .alarm-reminder-item {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 154px !important;
+  max-height: none !important;
+  overflow: visible !important;
+  contain: none !important;
+  gap: 10px !important;
+  padding: 14px !important;
+  border-radius: 22px !important;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.62)) !important;
+  border: 1px solid rgba(226, 232, 240, 0.13) !important;
+  box-shadow: 0 14px 38px rgba(2, 6, 23, 0.18) !important;
+  transform: none !important;
+}
+
+.reminders-panel-body .reminder-main {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.reminders-panel-body .compact-status-line,
+.reminders-panel-body .status-line {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  min-height: 30px !important;
+  margin-bottom: 2px !important;
+}
+
+.reminders-panel-body .status-dot {
+  width: 10px !important;
+  height: 10px !important;
+  flex: 0 0 10px !important;
+}
+
+.reminders-panel-body .compact-status-line small,
+.reminders-panel-body .category-chip,
+.reminders-panel-body .repeat-chip {
+  min-height: 28px !important;
+  padding: 7px 11px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  border-radius: 999px !important;
+  font-size: 13.5px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+}
+
+.reminders-panel-body .reminder-item h3,
+.reminders-panel-body .compact-reminder-item h3 {
+  display: block !important;
+  margin: 5px 0 3px !important;
+  max-height: none !important;
+  overflow: visible !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: initial !important;
+  font-size: 18px !important;
+  line-height: 1.14 !important;
+  letter-spacing: -0.02em !important;
+  overflow-wrap: anywhere !important;
+}
+
+.reminders-panel-body .reminder-item.done-item h3 {
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 2px !important;
+}
+
+.reminders-panel-body .reminder-when,
+.reminders-panel-body .event-line,
+.reminders-panel-body .next-line {
+  display: block !important;
+  margin: 1px 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  white-space: normal !important;
+  font-size: 14.5px !important;
+  line-height: 1.32 !important;
+  color: #cbd5e1 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.reminders-panel-body .event-line,
+.reminders-panel-body .next-line {
+  color: #f7d58a !important;
+}
+
+.reminders-panel-body .reminder-details {
+  display: block !important;
+  position: static !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  margin: 8px 0 0 !important;
+  overflow: visible !important;
+}
+
+.reminders-panel-body .reminder-details summary {
+  min-height: 32px !important;
+  padding: 7px 13px !important;
+  font-size: 13.5px !important;
+  border-radius: 999px !important;
+}
+
+.reminders-panel-body .reminder-details[open] {
+  width: 100% !important;
+}
+
+.reminders-panel-body .reminder-details p {
+  width: 100% !important;
+  max-height: none !important;
+  margin-top: 8px !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+  overflow: visible !important;
+}
+
+.reminders-panel-body .item-actions,
+.reminders-panel-body .compact-item-actions {
+  position: static !important;
+  inset: auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 42px !important;
+  height: auto !important;
+  margin: 2px 0 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  overflow: visible !important;
+  flex: 0 0 auto !important;
+}
+
+.reminders-panel-body .item-actions .stop-repeat-button,
+.reminders-panel-body .compact-item-actions .stop-repeat-button {
+  grid-column: 1 / -1 !important;
+}
+
+.reminders-panel-body .item-actions button,
+.reminders-panel-body .compact-item-actions button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: static !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+  height: auto !important;
+  padding: 10px 8px !important;
+  border-radius: 16px !important;
+  font-size: 13px !important;
+  line-height: 1.1 !important;
+  font-weight: 950 !important;
+  white-space: normal !important;
+}
+
+.reminders-panel-body .done-item {
+  opacity: 0.86 !important;
+}
+
+@media (max-width: 420px) {
+  .reminders-panel-body .reminder-list {
+    gap: 10px !important;
+  }
+  .reminders-panel-body .reminder-item,
+  .reminders-panel-body .compact-reminder-item,
+  .reminders-panel-body .alarm-reminder-item {
+    min-height: 148px !important;
+    padding: 12px !important;
+    border-radius: 20px !important;
+  }
+  .reminders-panel-body .reminder-item h3,
+  .reminders-panel-body .compact-reminder-item h3 {
+    font-size: 17px !important;
+  }
+  .reminders-panel-body .reminder-when,
+  .reminders-panel-body .event-line,
+  .reminders-panel-body .next-line {
+    font-size: 13.8px !important;
+  }
+  .reminders-panel-body .item-actions,
+  .reminders-panel-body .compact-item-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+  .reminders-panel-body .item-actions button,
+  .reminders-panel-body .compact-item-actions button {
+    min-height: 40px !important;
+    padding: 9px 6px !important;
+    font-size: 12.5px !important;
+  }
+}
+
+/* Sprint 3N.7 — reminder card anti-clipping safety after lock-screen UI reset */
+.reminders-panel-body .reminder-list {
+  padding-bottom: 24px !important;
+}
+
+.reminders-panel-body .reminder-item,
+.reminders-panel-body .compact-reminder-item,
+.reminders-panel-body .alarm-reminder-item {
+  min-height: unset !important;
+  overflow: visible !important;
+}
+
+.reminders-panel-body .done-item {
+  min-height: 128px !important;
+}
+
+.reminders-panel-body .item-actions,
+.reminders-panel-body .compact-item-actions {
+  margin-top: 8px !important;
+  visibility: visible !important;
+}
+
+/* RemindIQ 3N.11.5 direct patch: kill duplicate broken alarm surface */
+.ri-alarm-page,
+.ri-alarm-page[role="dialog"],
+.ri-alarm-bg-pulse,
+.ri-alarm-card {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+
+/* RemindIQ 3N.11.6: kill duplicate broken alarm surface. Keep only REMINDER DUE. */
+.ri-alarm-page,
+.ri-alarm-page[role="dialog"],
+.ri-alarm-bg-pulse,
+.ri-alarm-card {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }

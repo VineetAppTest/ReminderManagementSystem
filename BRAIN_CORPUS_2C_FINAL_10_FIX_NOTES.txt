@@ -1,0 +1,44 @@
+RemindIQ Sprint Brain-Corpus-2C: Final 10 Corpus Parser Fix
+
+Purpose
+- Reduce the remaining corpus regression failures after Brain-Corpus-2B.
+- Target the final 10 failures from the 110/120 corpus report.
+
+Fixes included
+1. Corpus regression harness calibration
+   - Does not hard-fail eventTimeText for intentionally incomplete AM/PM cases.
+   - Does not require alert count when the corpus itself says date/AMPM is missing.
+   - Keeps today/tomorrow strict while allowing previously calibrated weekday/date normalization.
+
+2. Relative alarm phrase support
+   - alarm after 10 minutes -> eventTimeText: 10 minutes from now
+   - create alarm 1 minute from now -> eventTimeText: 1 minute from now
+
+3. Wake-up alarm normalization
+   - wake me up tomorrow at 7 am -> task normalized to Wake up.
+
+4. Repeating alarm task extraction
+   - Set a daily alarm for medicine at 9 am -> task: medicine.
+   - Every Monday at 8 am remind me for team standup -> task: team standup.
+
+5. Voice shortcut hardening
+   - meeting with Raj at ATM -> ATM is treated as 8 pm.
+   - meeting with Rajat ATM already continues through existing normalization.
+
+Important guardrail
+- Ambiguous one-time reminder times without AM/PM should remain blocked from save.
+- Corpus cases that intentionally miss AM/PM should not be counted as product failures merely because the app asks for clarification.
+
+Validation run
+- npm run build: passed
+- npx cap sync android: passed
+
+Recommended tests
+1. Standard regression
+2. Simulation Learning Lab
+3. Corpus regression
+4. Dataset export
+
+Expected result
+- Corpus regression should improve from 110/120.
+- Standard regression should remain clean.

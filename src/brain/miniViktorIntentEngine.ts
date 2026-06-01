@@ -26,6 +26,11 @@ export function normaliseWithMiniViktor(input: string) {
     .replace(/\b(am|pm)\./gi, "$1")
     .replace(/\brajat\s+atm\b/gi, "Raj at 8 pm")
     .replace(/\brajat\s+(\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm)?)/gi, "Raj at $1")
+    .replace(/\bignore\s+(?:the\s+)?(?:previous|last)(?:\s+one)?\b/gi, "start over")
+    .replace(/\bforget\s+(?:the\s+)?(?:previous|last)(?:\s+one)?\b/gi, "start over")
+    .replace(/\b(?:scrap|scratch|discard|delete|remove|erase|wipe|abandon|ditch|skip)\s+(?:it|this|that|this\s+one|the\s+draft|draft|the\s+reminder|reminder)?\b/gi, "start over")
+    .replace(/\b(?:clear|cancel)\s+(?:it|this|that|current|the\s+draft|draft|the\s+reminder|reminder)?\b/gi, "start over")
+    .replace(/\b(?:never\s+mind|nevermind|not\s+now|not\s+this|leave\s+(?:it|this|that)|abort(?:\s+it)?)\b/gi, "start over")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -77,7 +82,7 @@ export function classifyMiniViktorIntent(input: string, context: DraftContext): 
     return { primaryIntent: "confirm_save", confidence: "high", reasons: ["explicit save confirmation"] };
   }
 
-  if (/^(no|cancel|drop|drop it|not needed|doesn't work|doesnt work|doesn’t work)$/i.test(text)) {
+  if (/^(no|cancel|cancel it|cancel that|cancel this|drop|drop it|drop this|drop that|ignore|ignore it|ignore this|ignore that|scrap|scrap it|scrap this|scrap that|scratch it|scratch that|discard|discard it|delete it|remove it|forget it|clear|clear it|not needed|not now|never mind|nevermind|doesn't work|doesnt work|doesn’t work)$/i.test(text)) {
     return { primaryIntent: "cancel", confidence: "high", reasons: ["explicit cancel"] };
   }
 
@@ -105,7 +110,10 @@ export function classifyMiniViktorIntent(input: string, context: DraftContext): 
     return { primaryIntent: "multiple_reminder_alerts", confidence: "medium", reasons: ["multiple connected time expressions"] };
   }
 
-  if (MINI_VIKTOR_SEED_BRAIN.beforeEventPatterns.some((phrase) => text.includes(phrase))) {
+  if (
+    MINI_VIKTOR_SEED_BRAIN.beforeEventPatterns.some((phrase) => text.includes(phrase)) ||
+    /\b(?:\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(?:minutes?|mins?|min|hours?|hrs?|hr)\s+before\b/i.test(text)
+  ) {
     return { primaryIntent: "before_event_reminder", confidence: "high", reasons: ["before-event phrase detected"] };
   }
 

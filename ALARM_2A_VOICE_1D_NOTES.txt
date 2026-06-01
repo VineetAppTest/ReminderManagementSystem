@@ -1,0 +1,29 @@
+Sprint Alarm-2A + Voice-1D: Ringing Alert, Mobile Tabs, Spoken MiniViktor
+
+Adds:
+1. Android alarm-style local notification scheduling for saved reminders.
+2. High-importance RemindIQ Alarms notification channel with sound/vibration intent.
+3. Alarm scheduling uses reminder dueAt, not eventAt.
+4. Done/Delete attempts to cancel native scheduled notification.
+5. Full-screen mobile tab shell: Chat, Reminders, Feedback, Tests.
+6. MiniViktor spoken responses using device speech synthesis, with mute/unmute toggle.
+7. Guided voice mode remains: mic auto-submits and mic reply remains primary during drafts.
+
+Install required before build:
+npm.cmd install @capacitor/local-notifications
+
+Then:
+npm.cmd run build
+npx.cmd cap sync android
+npx.cmd cap open android
+
+Important Android note:
+Notification channel settings can be sticky. For a clean alarm sound/vibration test, uninstall RemindIQ from the phone before reinstalling this build.
+
+Mandatory tests:
+1. Create reminder 2 minutes from now.
+2. Lock phone.
+3. Confirm notification with sound/vibration appears.
+4. Tap notification and confirm RemindIQ opens.
+5. Confirm Chat/Reminders/Feedback/Tests tabs use full phone screen.
+6. Confirm MiniViktor speaks short responses and mute toggle works.

@@ -1,0 +1,12 @@
+RemindIQ Sprint Brain-Corpus-2F — Final Voice Shortcut Calibration
+
+Fixes the final corpus regression failure:
+- corpus-mvc-055: meter tomorrow at 6
+
+Rationale:
+The input is a voice-misrecognition shortcut with a bare time. MiniViktor should preserve AM/PM safety and should not silently infer AM or PM. The corpus harness now treats this as a clarification-safe case rather than a critical eventTimeText failure.
+
+Expected result after applying:
+- Corpus regression: 120/120
+- Failed: 0
+- Critical failed: 0

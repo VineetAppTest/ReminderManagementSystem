@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/fullScreenAlarmRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/remindiq_alarm_gradient"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="28dp">
+
+    <TextView
+        android:id="@+id/alarmEyebrow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="REMINDIQ"
+        android:textAllCaps="true"
+        android:textColor="#EAF2FF"
+        android:textSize="14sp"
+        android:letterSpacing="0.16"
+        android:alpha="0.86" />
+
+    <TextView
+        android:id="@+id/alarmTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Due now"
+        android:textColor="#FFFFFF"
+        android:textSize="42sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/alarmTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:gravity="center"
+        android:text="Reminder"
+        android:textColor="#FFFFFF"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:maxLines="3" />
+
+    <TextView
+        android:id="@+id/alarmSubtext"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:text="What would you like to do?"
+        android:textColor="#DCE7FF"
+        android:textSize="16sp" />
+
+    <LinearLayout
+        android:id="@+id/alarmPrimaryActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="42dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnSnooze"
+            style="@style/RemindIQAlarmSecondaryButton"
+            android:layout_width="0dp"
+            android:layout_height="58dp"
+            android:layout_weight="1"
+            android:text="Snooze 5m" />
+
+        <Space
+            android:layout_width="14dp"
+            android:layout_height="1dp" />
+
+        <Button
+            android:id="@+id/btnDismiss"
+            style="@style/RemindIQAlarmPrimaryButton"
+            android:layout_width="0dp"
+            android:layout_height="58dp"
+            android:layout_weight="1"
+            android:text="Dismiss" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnOpenApp"
+        style="@style/RemindIQAlarmGhostButton"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="18dp"
+        android:text="Open RemindIQ" />
+
+</LinearLayout>

@@ -1,0 +1,28 @@
+Sprint Alarm-2B: Native Ringing Alarm + MiniViktor Recovery Guard
+
+Implemented:
+1. Adds Android native alarm bridge: RemindIqNativeAlarm.
+2. Schedules alarms using Android AlarmManager instead of relying only on Capacitor Local Notifications.
+3. Adds BroadcastReceiver that launches a ringing alarm screen.
+4. Adds AlarmActivity with ringtone, vibration, Stop/Done, and Snooze 10 min.
+5. Adds exact-alarm related permissions in AndroidManifest.xml.
+6. Keeps Capacitor Local Notifications as fallback from the React side.
+7. Adds unrelated-input guard during confirmation:
+   - If the user says something like "rocket" while a reminder is ready to save,
+     MiniViktor responds: "I don’t think this is related to the current reminder. Please confirm — should I save it, change it, or cancel it?"
+8. Adds stronger ignore handling:
+   - "ignore" and "ignore it" now clear/cancel the active draft.
+
+Important Android testing note:
+Uninstall the old RemindIQ app before installing this build. Android alarm/notification settings can remain sticky across builds.
+
+Mandatory tests:
+1. create reminder 2 minutes from now -> test alarm -> save reminder
+   Expected: ringing screen with sound/vibration appears at due time.
+2. create reminder 2 minutes from now -> rocket
+   Expected: unrelated-input guard response, no stale repeated confirmation.
+3. create reminder 2 minutes from now -> ignore
+   Expected: active draft cleared.
+4. From ringing screen, test Stop/Done and Snooze 10 min.
+
+If the Android build fails because MainActivity.java already exists with custom content, merge only the registerPlugin(RemindIqNativeAlarmPlugin.class) line into the existing MainActivity.java.

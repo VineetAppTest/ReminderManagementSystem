@@ -1,0 +1,18 @@
+Sprint Alarm-2B Fix 3: Native Alarm Screen Readability + Alarm Intent Handling
+
+Fixes included:
+1. Replaced the full-screen alarm activity with a hard high-contrast Android layout.
+2. Uses black background, white/yellow large text, and large red/blue action buttons.
+3. Stop / Done and Snooze 10 minutes are always visible on the native alarm screen.
+4. Treats “create an alarm”, “set an alarm”, and “alarm” as alarm intent, not task title.
+5. Alarm intent without task defaults to title “Alarm”.
+6. Reminder intent remains stricter: time-only reminders ask what the reminder is about.
+7. Prevents time phrases like “2 minutes from now” from becoming the reminder task.
+
+Mandatory tests:
+- create an alarm → 1 minute from now → save it
+  Expected title: Alarm; native alarm rings; full-screen screen readable; Stop/Snooze visible.
+- set a reminder → 1 minute from now
+  Expected: asks what the reminder is about.
+- create reminder 2 minutes from now
+  Expected: asks what the reminder is about, not title “2 minutes from now”.

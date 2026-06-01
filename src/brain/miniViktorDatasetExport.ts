@@ -1,5 +1,6 @@
 import { MINI_VIKTOR_REGRESSION_CASES } from "./miniViktorRegressionArena";
 import { runMiniViktorSimulationCase } from "./miniViktorSimulationLab";
+import { getMiniViktorReminderCorpus, exportMiniViktorCorpusAsJsonl } from "./miniViktorReminderCorpus";
 
 export type MiniViktorTrainingExample = {
   id: string;
@@ -22,6 +23,7 @@ export type MiniViktorTrainingExample = {
     blockSaveWhenIncomplete: true;
   };
   status: "clean" | "needs_review";
+  source?: "regression" | "corpus";
 };
 
 export type MiniViktorDatasetExport = {
@@ -33,7 +35,7 @@ export type MiniViktorDatasetExport = {
 };
 
 export function buildMiniViktorTrainingDataset(): MiniViktorDatasetExport {
-  const examples: MiniViktorTrainingExample[] = MINI_VIKTOR_REGRESSION_CASES.map((testCase) => {
+  const regressionExamples: MiniViktorTrainingExample[] = MINI_VIKTOR_REGRESSION_CASES.map((testCase) => {
     const result = runMiniViktorSimulationCase(testCase);
 
     return {
@@ -49,8 +51,27 @@ export function buildMiniViktorTrainingDataset(): MiniViktorDatasetExport {
         blockSaveWhenIncomplete: true,
       },
       status: result.passed ? "clean" : "needs_review",
+      source: "regression",
     };
   });
+
+  const corpusExamples: MiniViktorTrainingExample[] = getMiniViktorReminderCorpus().items.map((item) => ({
+    id: item.id,
+    category: item.category,
+    input: item.input,
+    conversation: [item.input],
+    expected: item.expected,
+    guardrails: {
+      hiddenInferenceAllowed: false,
+      preserveEventTime: true,
+      preserveAllReminderCandidates: true,
+      blockSaveWhenIncomplete: true,
+    },
+    status: item.critical ? "clean" : "needs_review",
+    source: "corpus",
+  }));
+
+  const examples = [...regressionExamples, ...corpusExamples];
 
   return {
     generatedAt: new Date().toISOString(),
@@ -59,6 +80,10 @@ export function buildMiniViktorTrainingDataset(): MiniViktorDatasetExport {
     needsReview: examples.filter((example) => example.status === "needs_review").length,
     examples,
   };
+}
+
+export function miniViktorCorpusDatasetToJsonl() {
+  return exportMiniViktorCorpusAsJsonl(getMiniViktorReminderCorpus());
 }
 
 export function miniViktorDatasetToJson(exportData: MiniViktorDatasetExport) {

@@ -1,0 +1,46 @@
+RemindIQ Sprint Alarm 3L - MiniViktor Context + Alarm UX Closeout
+Base: Sprint 3K MiniViktor Context UX Closeout
+
+Scope included in this build:
+1. Full-screen alarm UX closeout
+   - Added stronger high-contrast full-screen alarm styling.
+   - Added safer long-title wrapping and scroll containment for long reminder/alarm phrases.
+   - Kept Snooze, Done, and Stop Repeat controls directly on the full-screen alarm.
+   - Increased button contrast and tap target size for mobile.
+
+2. Done / Snooze / audio shutdown hardening
+   - Added stopAllAudioNow() to synchronously stop in-app alarm tone, browser speech synthesis, native TTS best-effort, vibration, and MiniViktor speaking state.
+   - Wired stopAllAudioNow() into full-screen Snooze, Done, and Stop Repeat.
+   - Added additional cleanup hooks for pagehide, beforeunload, blur, visibilitychange, and freeze.
+   - For repeating reminders, Done now keeps the repeat active and reschedules the next native alarm best-effort.
+
+3. Reminder list compaction
+   - Reduced saved-reminder card padding and fixed oversized alarm card behavior.
+   - Added dynamic card height behavior.
+   - Clamped long reminder titles to keep cards compact.
+   - Kept raw text under Details so long voice phrases do not stretch the reminder list.
+
+4. MiniViktor cancel / clear draft language
+   - Extended cancellation synonym coverage around scrap/drop/clear/ignore/discard/forget/delete/remove/erase/wipe/abort/ditch/kill/void/bin/trash/stop/never mind.
+   - Maintains the Sprint 3K contextual fallback direction: do not over-reject short user corrections while a draft is active.
+
+5. Sprint build structure
+   - This ZIP is a full build folder based on Sprint 3K, not a tiny diff-only patch.
+   - Apply it as the next Sprint 3L base, then run build/sync/open commands.
+
+Mandatory local validation:
+1. npm.cmd run build
+2. npx.cmd cap sync android
+3. npx.cmd cap open android
+
+Manual checks:
+1. Create one-time reminder and save.
+2. Create repeat alarm: "create repeating alarm 1 minute from now receives everyone for today only".
+3. Let full-screen alarm ring.
+4. Confirm long title is readable and does not stretch the screen.
+5. Confirm Snooze is visible on full-screen alarm and reschedules.
+6. Confirm Done is visible on full-screen alarm and stops audio.
+7. Confirm Stop repeat is visible for repeating alarms.
+8. Confirm MiniViktor audio stops when app is backgrounded/closed.
+9. Confirm saved alarm cards are compact.
+10. Confirm "scrap that", "never mind", "discard it", "kill it", and "trash it" clear the active draft.

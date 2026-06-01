@@ -1,0 +1,36 @@
+RemindIQ Sprint Alarm 3I - P0 UX + Audio Control Fix
+
+Build target:
+RemindIQ-Sprint-Alarm-3I-P0-UX-Audio-Control-Fix.zip
+
+Included fixes:
+1. Full-screen alarm readability and premium UI hardening
+   - High-contrast full-screen alarm layout.
+   - Long alarm titles are contained inside a scroll-safe title panel.
+   - No horizontal overflow for long phrases.
+   - Stronger background contrast and clearer time/title hierarchy.
+
+2. Full-screen Snooze / Done / Stop Repeat controls
+   - Snooze 5 min, Done, and Stop repeat are directly visible on the full-screen alarm.
+   - Done dismisses the current full-screen alarm and stops MiniViktor/audio cleanup.
+   - Snooze creates a fresh one-time snoozed alarm 5 minutes later.
+   - Stop repeat disables future repeat occurrences and marks the repeat as done.
+
+3. Audio cleanup hardening
+   - MiniViktor speech and in-app alarm tone are stopped on Done, Snooze, Stop repeat, mark done, and stop repeat.
+   - Added cleanup on pagehide, beforeunload, and document visibilitychange.
+   - Added vibration stop during cleanup.
+
+4. Victor-like MiniViktor voice tuning
+   - Lower, calmer, slower voice settings.
+   - Selects best available en-IN / en-GB / en-US device voice where available.
+   - Falls back safely when device/browser voice list is limited.
+
+5. Compact reminder/alarm cards
+   - Reminder cards now use dynamic height.
+   - Raw text is hidden behind a Details expander.
+   - Repeat labels are compact.
+   - Mobile card action layout is more compact.
+
+Validation run:
+npm run build - PASSED

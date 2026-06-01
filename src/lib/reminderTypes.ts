@@ -20,6 +20,17 @@ export type ChatMessage = {
   createdAt: string;
 };
 
+export type ReminderRepeatRule = {
+  kind: "none" | "hourly" | "daily" | "weekly";
+  intervalMinutes?: number;
+  timeText?: string;
+  daysOfWeek?: number[];
+  label: string;
+  /** Optional repeat stop boundary. Used for voice cases like "today only". */
+  endDateISO?: string;
+  endDatePhrase?: string;
+};
+
 export type ReminderAlert = {
   id: string;
   dateISO: string;
@@ -50,6 +61,8 @@ export type Reminder = {
   eventTimeText?: string;
   eventPhrase?: string;
   sourceDraftId?: string;
+  repeatRule?: ReminderRepeatRule | null;
+  isAlarm?: boolean;
 };
 
 export type ReminderDraft = {
@@ -78,6 +91,9 @@ export type ReminderDraft = {
       }
     | null;
   lastQuestion: "task" | "date" | "time" | "ampm" | "confirm" | null;
+  repeatRule?: ReminderRepeatRule | null;
+  isAlarm?: boolean;
+  pendingRepeatQuestion?: "repeat_kind" | "repeat_start" | "repeat_time" | "repeat_interval" | null;
 };
 
 export type LearningMemory = {

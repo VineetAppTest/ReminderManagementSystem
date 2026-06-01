@@ -1,0 +1,3827 @@
+import type { MiniViktorReminderCorpus } from "./miniViktorReminderCorpus";
+
+export const MINI_VIKTOR_REMINDER_CORPUS_DATA: MiniViktorReminderCorpus = {
+  "name": "MiniViktor Reminder Use-Case Corpus",
+  "version": "brain-corpus-1",
+  "createdFor": "RemindIQ",
+  "description": "Seed corpus for MiniViktor reminder/alarm understanding, regression, simulation, and future training dataset export.",
+  "count": 200,
+  "schema": {
+    "id": "string",
+    "category": "string",
+    "input": "string or conversation phrase",
+    "expected": "structured expected interpretation",
+    "assistantShouldAsk": "expected natural follow-up when incomplete/ambiguous",
+    "critical": "boolean",
+    "tags": "string[]"
+  },
+  "categories": [
+    "alarm_intent",
+    "before_event",
+    "correction_and_recovery",
+    "date_typo",
+    "generated_variation",
+    "missing_task",
+    "multiple_alerts",
+    "one_time_reminder",
+    "repeating_alarm",
+    "visible_ampm_inference",
+    "voice_misrecognition"
+  ],
+  "items": [
+    {
+      "id": "mvc-001",
+      "category": "one_time_reminder",
+      "input": "Remind me to call Raj tomorrow at 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-002",
+      "category": "one_time_reminder",
+      "input": "Meeting with Raj at 8 pm tomorrow",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Meeting with Raj",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-003",
+      "category": "one_time_reminder",
+      "input": "Doctor appointment next Tuesday at 11 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Doctor appointment",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "11:00 am",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-004",
+      "category": "one_time_reminder",
+      "input": "Pay electricity bill Friday evening",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Pay electricity bill",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "evening",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-005",
+      "category": "one_time_reminder",
+      "input": "Buy milk today at 7 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Buy milk",
+        "eventDatePhrase": "today",
+        "eventTimeText": "7:00 pm",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-006",
+      "category": "one_time_reminder",
+      "input": "Pick up medicine tomorrow morning",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Pick up medicine",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "morning",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-007",
+      "category": "one_time_reminder",
+      "input": "Submit report Monday 10 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Submit report",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "10:00 am",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-008",
+      "category": "one_time_reminder",
+      "input": "Call mom at 6",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Call mom",
+        "eventDatePhrase": "",
+        "eventTimeText": "6:00",
+        "alerts": [],
+        "missing": [
+          "date",
+          "ampm"
+        ]
+      },
+      "assistantShouldAsk": "Just confirming \u2014 do you mean 6:00 AM or 6:00 PM?",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-009",
+      "category": "one_time_reminder",
+      "input": "Dinner at 9 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Dinner",
+        "eventDatePhrase": "",
+        "eventTimeText": "9:00 pm",
+        "alerts": [],
+        "missing": [
+          "date"
+        ]
+      },
+      "assistantShouldAsk": "Which day is Dinner at 9:00 pm?",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-010",
+      "category": "one_time_reminder",
+      "input": "Lunch with boss tomorrow at 2",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Lunch with boss",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "2:00",
+        "alerts": [],
+        "missing": [
+          "ampm"
+        ]
+      },
+      "assistantShouldAsk": "Just confirming \u2014 do you mean 2:00 AM or 2:00 PM?",
+      "critical": true,
+      "tags": [
+        "one_time"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-011",
+      "category": "alarm_intent",
+      "input": "create an alarm",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "alarmType": "one_time",
+        "eventDatePhrase": "",
+        "eventTimeText": "",
+        "alerts": [],
+        "missing": [
+          "time"
+        ]
+      },
+      "assistantShouldAsk": "When should the alarm ring?",
+      "critical": true,
+      "tags": [
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-012",
+      "category": "alarm_intent",
+      "input": "set an alarm for 6 am tomorrow",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "alarmType": "one_time",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "6:00 am",
+        "alerts": [
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "6:00 am"
+          }
+        ],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-013",
+      "category": "alarm_intent",
+      "input": "alarm after 10 minutes",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "alarmType": "one_time",
+        "eventDatePhrase": "relative",
+        "eventTimeText": "10 minutes from now",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-014",
+      "category": "alarm_intent",
+      "input": "create alarm 1 minute from now",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "alarmType": "one_time",
+        "eventDatePhrase": "relative",
+        "eventTimeText": "1 minute from now",
+        "alerts": [],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-015",
+      "category": "alarm_intent",
+      "input": "wake me up tomorrow at 7 am",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Wake up",
+        "alarmType": "one_time",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "alerts": [
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "7:00 am"
+          }
+        ],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-016",
+      "category": "alarm_intent",
+      "input": "set alarm for 9 pm",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "alarmType": "one_time",
+        "eventDatePhrase": "",
+        "eventTimeText": "9:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "",
+            "timeText": "9:00 pm"
+          }
+        ],
+        "missing": [
+          "date"
+        ]
+      },
+      "assistantShouldAsk": "Which day should I set the alarm for?",
+      "critical": true,
+      "tags": [
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-017",
+      "category": "missing_task",
+      "input": "reminder for 2 minutes from now",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "",
+        "alerts": "extract_time",
+        "missing": [
+          "task"
+        ]
+      },
+      "assistantShouldAsk": "What should I remind you about?",
+      "critical": true,
+      "tags": [
+        "missing_task",
+        "guardrail"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-018",
+      "category": "missing_task",
+      "input": "set a reminder for 1:15 pm today",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "",
+        "alerts": "extract_time",
+        "missing": [
+          "task"
+        ]
+      },
+      "assistantShouldAsk": "What should I remind you about?",
+      "critical": true,
+      "tags": [
+        "missing_task",
+        "guardrail"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-019",
+      "category": "missing_task",
+      "input": "remind me at 4 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "",
+        "alerts": "extract_time",
+        "missing": [
+          "task"
+        ]
+      },
+      "assistantShouldAsk": "What should I remind you about?",
+      "critical": true,
+      "tags": [
+        "missing_task",
+        "guardrail"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-020",
+      "category": "missing_task",
+      "input": "reminder tomorrow at 7 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "",
+        "alerts": "extract_time",
+        "missing": [
+          "task"
+        ]
+      },
+      "assistantShouldAsk": "What should I remind you about?",
+      "critical": true,
+      "tags": [
+        "missing_task",
+        "guardrail"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-021",
+      "category": "missing_task",
+      "input": "create reminder 2 minutes from now",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "",
+        "alerts": "extract_time",
+        "missing": [
+          "task"
+        ]
+      },
+      "assistantShouldAsk": "What should I remind you about?",
+      "critical": true,
+      "tags": [
+        "missing_task",
+        "guardrail"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-022",
+      "category": "before_event",
+      "input": "Team meeting at 5 pm today, remind me half an hour before",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Team meeting",
+        "eventDatePhrase": "today",
+        "eventTimeText": "5:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "today",
+            "timeText": "4:30 pm"
+          }
+        ],
+        "offset": "30 minutes",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "before_event"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-023",
+      "category": "before_event",
+      "input": "Doctor appointment tomorrow at 11 am remind me 1 hour before",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Doctor appointment",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "11:00 am",
+        "alerts": [
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "10:00 am"
+          }
+        ],
+        "offset": "1 hour",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "before_event"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-024",
+      "category": "before_event",
+      "input": "Flight at 6 am Friday remind me 2 hours before",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Flight",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "6:00 am",
+        "alerts": [
+          {
+            "datePhrase": "Friday",
+            "timeText": "4:00 am"
+          }
+        ],
+        "offset": "2 hours",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "before_event"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-025",
+      "category": "before_event",
+      "input": "Lunch at 1:10 tomorrow reminder at 12 and 1",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Lunch",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "1:10 pm",
+        "alerts": [
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "12:00 pm"
+          },
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "1:00 pm"
+          }
+        ],
+        "offset": "specific",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "before_event"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-026",
+      "category": "multiple_alerts",
+      "input": "Meeting at 8 pm tomorrow, remind me today at 7 and tomorrow at 6",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "today",
+            "timeText": "7:00 pm"
+          },
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "6:00 pm"
+          }
+        ],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "multiple_alerts"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-027",
+      "category": "multiple_alerts",
+      "input": "Meeting tomorrow at 7 pm reminder at 6pm n then 6.30",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "6:00 pm"
+          },
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "6:30 pm"
+          }
+        ],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "multiple_alerts"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-028",
+      "category": "multiple_alerts",
+      "input": "Lunch with X tomorrow, reminder at 12 and 1 as lunch is at 1.10",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Lunch with X",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "1:10 pm",
+        "alerts": [
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "12:00 pm"
+          },
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "1:00 pm"
+          }
+        ],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "multiple_alerts"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-029",
+      "category": "multiple_alerts",
+      "input": "Meet at 8 pm tomorrow earlier reminder today at 7 and tomorrow at 5",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Meet",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "today",
+            "timeText": "7:00 pm"
+          },
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "5:00 pm"
+          }
+        ],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "multiple_alerts"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-030",
+      "category": "multiple_alerts",
+      "input": "Class at 4 pm today remind me at 3 and 3:30",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Class",
+        "eventDatePhrase": "today",
+        "eventTimeText": "4:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "today",
+            "timeText": "3:00 pm"
+          },
+          {
+            "datePhrase": "today",
+            "timeText": "3:30 pm"
+          }
+        ],
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "multiple_alerts"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-031",
+      "category": "repeating_alarm",
+      "input": "Create a repetitive alarm with 1 hour interval",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "repeat": {
+          "type": "hourly",
+          "intervalHours": 1
+        },
+        "missing": [
+          "start_time"
+        ]
+      },
+      "assistantShouldAsk": "When should the first alarm start?",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-032",
+      "category": "repeating_alarm",
+      "input": "Create a repetitive alarm after 1 hour",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "repeat": {
+          "type": "hourly",
+          "intervalHours": 1,
+          "firstDue": "1 hour from now"
+        },
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-033",
+      "category": "repeating_alarm",
+      "input": "Create a repetitive alarm daily at 2 pm",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "repeat": {
+          "type": "daily",
+          "time": "2:00 pm"
+        },
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-034",
+      "category": "repeating_alarm",
+      "input": "Weekly repeat alarm at 5 pm Monday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "repeat": {
+          "type": "weekly",
+          "day": "Monday",
+          "time": "5:00 pm"
+        },
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-035",
+      "category": "repeating_alarm",
+      "input": "Create a daily or weekly repeat alarm",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "repeat": {
+          "type": "unknown"
+        },
+        "missing": [
+          "repeat_type",
+          "time"
+        ]
+      },
+      "assistantShouldAsk": "Should it repeat daily or weekly, and what time should it ring?",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-036",
+      "category": "repeating_alarm",
+      "input": "Set a daily alarm for medicine at 9 am",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "medicine",
+        "repeat": {
+          "type": "daily",
+          "time": "9:00 am"
+        },
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-037",
+      "category": "repeating_alarm",
+      "input": "Repeat alarm every 30 minutes starting now",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "repeat": {
+          "type": "interval",
+          "intervalMinutes": 30,
+          "firstDue": "now"
+        },
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-038",
+      "category": "repeating_alarm",
+      "input": "Every Monday at 8 am remind me for team standup",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team standup",
+        "repeat": {
+          "type": "weekly",
+          "day": "Monday",
+          "time": "8:00 am"
+        },
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-039",
+      "category": "repeating_alarm",
+      "input": "Remind me every day at 7 pm to take medicine",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "repeat": {
+          "type": "daily",
+          "time": "7:00 pm"
+        },
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-040",
+      "category": "repeating_alarm",
+      "input": "Set alarm every 1 hour",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "repeat": {
+          "type": "hourly",
+          "intervalHours": 1
+        },
+        "missing": [
+          "start_time"
+        ]
+      },
+      "assistantShouldAsk": "When should the first alarm start?",
+      "critical": true,
+      "tags": [
+        "repeat",
+        "alarm"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-041",
+      "category": "correction_and_recovery",
+      "input": "ignore the previous one",
+      "expected": {
+        "intent": "cancel_current_draft",
+        "effect": "clear_active_draft"
+      },
+      "assistantShouldAsk": "No problem \u2014 I\u2019ll ignore this one. Tell me the next reminder when ready.",
+      "critical": true,
+      "tags": [
+        "recovery"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-042",
+      "category": "correction_and_recovery",
+      "input": "ignore it",
+      "expected": {
+        "intent": "cancel_current_draft",
+        "effect": "clear_active_draft"
+      },
+      "assistantShouldAsk": "No problem \u2014 I\u2019ll ignore this one. Tell me the next reminder when ready.",
+      "critical": true,
+      "tags": [
+        "recovery"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-043",
+      "category": "correction_and_recovery",
+      "input": "drop it",
+      "expected": {
+        "intent": "cancel_current_draft",
+        "effect": "clear_active_draft"
+      },
+      "assistantShouldAsk": "No problem \u2014 I won\u2019t save it.",
+      "critical": true,
+      "tags": [
+        "recovery"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-044",
+      "category": "correction_and_recovery",
+      "input": "cancel this reminder",
+      "expected": {
+        "intent": "cancel_current_draft",
+        "effect": "clear_active_draft"
+      },
+      "assistantShouldAsk": "Cancelled. Tell me the next reminder when ready.",
+      "critical": true,
+      "tags": [
+        "recovery"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-045",
+      "category": "correction_and_recovery",
+      "input": "start over",
+      "expected": {
+        "intent": "reset_flow",
+        "effect": "clear_active_draft"
+      },
+      "assistantShouldAsk": "Starting over. Tell me the reminder again.",
+      "critical": true,
+      "tags": [
+        "recovery"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-046",
+      "category": "correction_and_recovery",
+      "input": "rocket",
+      "expected": {
+        "intent": "unrelated_input",
+        "effect": "preserve_draft"
+      },
+      "assistantShouldAsk": "I don\u2019t think this is related to the current reminder. Please confirm \u2014 should I save it, change it, or cancel it?",
+      "critical": true,
+      "tags": [
+        "recovery"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-047",
+      "category": "correction_and_recovery",
+      "input": "I said meeting with Raj at 8 pm",
+      "expected": {
+        "intent": "correction",
+        "effect": "replace_polluted_draft",
+        "task": "meeting with Raj",
+        "eventTimeText": "8:00 pm"
+      },
+      "assistantShouldAsk": "Got it \u2014 correcting that.",
+      "critical": true,
+      "tags": [
+        "recovery"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-048",
+      "category": "correction_and_recovery",
+      "input": "that is wrong",
+      "expected": {
+        "intent": "voice_error",
+        "effect": "ask_repeat_or_edit"
+      },
+      "assistantShouldAsk": "Okay, I\u2019ll ignore that capture. Please say it again.",
+      "critical": true,
+      "tags": [
+        "recovery"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-049",
+      "category": "voice_misrecognition",
+      "input": "meeting with Rajat 8 p.m.",
+      "expected": {
+        "intent": "normalise_voice_text",
+        "normalizedText": "meeting with Raj",
+        "eventTimeText": "8:00 pm",
+        "missing": [
+          "date"
+        ]
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "voice"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-050",
+      "category": "voice_misrecognition",
+      "input": "meeting with Raj at ATM",
+      "expected": {
+        "intent": "normalise_voice_text",
+        "normalizedText": "meeting with Raj",
+        "eventTimeText": "8:00 pm",
+        "missing": [
+          "date"
+        ]
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "voice"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-051",
+      "category": "voice_misrecognition",
+      "input": "meeting with Rajat ATM",
+      "expected": {
+        "intent": "normalise_voice_text",
+        "normalizedText": "meeting with Raj",
+        "eventTimeText": "8:00 pm",
+        "missing": [
+          "date"
+        ]
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "voice"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-052",
+      "category": "voice_misrecognition",
+      "input": "meeting with Raj at 8 p m",
+      "expected": {
+        "intent": "normalise_voice_text",
+        "normalizedText": "meeting with Raj",
+        "eventTimeText": "8:00 pm",
+        "missing": [
+          "date"
+        ]
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "voice"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-053",
+      "category": "voice_misrecognition",
+      "input": "meeting with Raj at 8 P M",
+      "expected": {
+        "intent": "normalise_voice_text",
+        "normalizedText": "meeting with Raj",
+        "eventTimeText": "8:00 pm",
+        "missing": [
+          "date"
+        ]
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "voice"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-054",
+      "category": "voice_misrecognition",
+      "input": "meet Raj tomorrow at 6 p.m.",
+      "expected": {
+        "intent": "normalise_voice_text",
+        "normalizedText": "meet Raj",
+        "eventTimeText": "6:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "voice"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-055",
+      "category": "voice_misrecognition",
+      "input": "meter tomorrow at 6",
+      "expected": {
+        "intent": "normalise_voice_text",
+        "normalizedText": "meet Raj",
+        "eventTimeText": "6:00",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "voice"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-056",
+      "category": "voice_misrecognition",
+      "input": "carrot",
+      "expected": {
+        "intent": "normalise_voice_text",
+        "normalizedText": "correct",
+        "eventTimeText": "",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "voice"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-057",
+      "category": "date_typo",
+      "input": "meeting at 8 pm tomorro",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "typo"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-058",
+      "category": "date_typo",
+      "input": "meeting at 8 pm tomrro",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "typo"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-059",
+      "category": "date_typo",
+      "input": "meeting at 8 pm tmrw",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "typo"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-060",
+      "category": "date_typo",
+      "input": "meeting at 8 pm tmoro",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "typo"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-061",
+      "category": "date_typo",
+      "input": "meeting at 8 pm tommorow",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "typo"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-062",
+      "category": "date_typo",
+      "input": "meeting at 8 pm tdy",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "meeting",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "typo"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-063",
+      "category": "date_typo",
+      "input": "meeting at 8 pm todday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "meeting",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "typo"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-064",
+      "category": "visible_ampm_inference",
+      "input": "Meet at 8 pm tomorrow earlier reminder today at 7 and tomorrow at 6",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Meet",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "today",
+            "timeText": "7:00 pm",
+            "ampmInferenceVisible": true
+          },
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "6:00 pm",
+            "ampmInferenceVisible": true
+          }
+        ],
+        "requiresAssumptionConfirmation": true
+      },
+      "assistantShouldAsk": "I\u2019m reading that as ... Is that correct?",
+      "critical": true,
+      "tags": [
+        "ampm",
+        "guardrail"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-065",
+      "category": "visible_ampm_inference",
+      "input": "Meeting today at 8 pm remind me at 3 n 7",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Meeting",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "today",
+            "timeText": "3:00 pm",
+            "ampmInferenceVisible": true
+          },
+          {
+            "datePhrase": "today",
+            "timeText": "7:00 pm",
+            "ampmInferenceVisible": true
+          }
+        ],
+        "requiresAssumptionConfirmation": true
+      },
+      "assistantShouldAsk": "I\u2019m reading that as ... Is that correct?",
+      "critical": true,
+      "tags": [
+        "ampm",
+        "guardrail"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-066",
+      "category": "visible_ampm_inference",
+      "input": "Dinner tomorrow at 9 pm reminder at 8",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "Dinner",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "9:00 pm",
+        "alerts": [
+          {
+            "datePhrase": "tomorrow",
+            "timeText": "8:00 pm",
+            "ampmInferenceVisible": true
+          }
+        ],
+        "requiresAssumptionConfirmation": true
+      },
+      "assistantShouldAsk": "I\u2019m reading that as ... Is that correct?",
+      "critical": true,
+      "tags": [
+        "ampm",
+        "guardrail"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-067",
+      "category": "generated_variation",
+      "input": "Remind me next Tuesday at 8 pm to call Raj",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-068",
+      "category": "generated_variation",
+      "input": "Create alarm for 7 am tomorrow",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-069",
+      "category": "generated_variation",
+      "input": "Create alarm for 9:30 pm Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-070",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 am today",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-071",
+      "category": "generated_variation",
+      "input": "submit invoice at 9:30 pm today",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "today",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-072",
+      "category": "generated_variation",
+      "input": "team meeting at 8 am today",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-073",
+      "category": "generated_variation",
+      "input": "Remind me to call Raj Monday at 9:30 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-074",
+      "category": "generated_variation",
+      "input": "Remind me to team meeting tomorrow at 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-075",
+      "category": "generated_variation",
+      "input": "Create alarm for 7 am Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-076",
+      "category": "generated_variation",
+      "input": "Set reminder for check oven tomorrow 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-077",
+      "category": "generated_variation",
+      "input": "pick up Ian at 7 am next Tuesday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-078",
+      "category": "generated_variation",
+      "input": "Remind me to pick up Ian Friday at 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-079",
+      "category": "generated_variation",
+      "input": "submit invoice at 9:30 pm tomorrow",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-080",
+      "category": "generated_variation",
+      "input": "Remind me tomorrow at 10 am to submit invoice",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-081",
+      "category": "generated_variation",
+      "input": "Remind me to team meeting tomorrow at 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-082",
+      "category": "generated_variation",
+      "input": "Remind me today at 8 am to pick up Ian",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-083",
+      "category": "generated_variation",
+      "input": "Set reminder for call Raj today 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "today",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-084",
+      "category": "generated_variation",
+      "input": "Remind me Friday at 8 pm to submit invoice",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-085",
+      "category": "generated_variation",
+      "input": "book cab at 9:30 pm Friday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "book cab",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-086",
+      "category": "generated_variation",
+      "input": "Remind me to pay bill Monday at 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-087",
+      "category": "generated_variation",
+      "input": "Remind me today at 9:30 pm to team meeting",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "today",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-088",
+      "category": "generated_variation",
+      "input": "Remind me Monday at 8 am to submit invoice",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-089",
+      "category": "generated_variation",
+      "input": "call Raj at 9:30 pm Monday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-090",
+      "category": "generated_variation",
+      "input": "Remind me tomorrow at 2 pm to take medicine",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-091",
+      "category": "generated_variation",
+      "input": "Set reminder for team meeting Monday 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-092",
+      "category": "generated_variation",
+      "input": "pick up Ian at 7 am Friday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-093",
+      "category": "generated_variation",
+      "input": "Create alarm for 10 am tomorrow",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-094",
+      "category": "generated_variation",
+      "input": "Set reminder for check oven Monday 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-095",
+      "category": "generated_variation",
+      "input": "Create alarm for 5 pm next Tuesday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-096",
+      "category": "generated_variation",
+      "input": "Remind me tomorrow at 9:30 pm to call Raj",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-097",
+      "category": "generated_variation",
+      "input": "follow up with client at 7 am tomorrow",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "follow up with client",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-098",
+      "category": "generated_variation",
+      "input": "Remind me to check oven next Tuesday at 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-099",
+      "category": "generated_variation",
+      "input": "Remind me to pick up Ian next Tuesday at 5 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-100",
+      "category": "generated_variation",
+      "input": "Remind me to team meeting tomorrow at 8 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-101",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 am Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-102",
+      "category": "generated_variation",
+      "input": "Remind me to pay bill Monday at 9:30 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-103",
+      "category": "generated_variation",
+      "input": "Set reminder for pay bill Monday 5 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-104",
+      "category": "generated_variation",
+      "input": "Create alarm for 2 pm today",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "today",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-105",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 pm today",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-106",
+      "category": "generated_variation",
+      "input": "Remind me tomorrow at 7 am to follow up with client",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "follow up with client",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-107",
+      "category": "generated_variation",
+      "input": "Set reminder for follow up with client Monday 10 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "follow up with client",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-108",
+      "category": "generated_variation",
+      "input": "Remind me today at 10 am to follow up with client",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "follow up with client",
+        "eventDatePhrase": "today",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-109",
+      "category": "generated_variation",
+      "input": "Create alarm for 7 am tomorrow",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-110",
+      "category": "generated_variation",
+      "input": "take medicine at 8 am Friday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-111",
+      "category": "generated_variation",
+      "input": "Remind me Friday at 5 pm to water plants",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "water plants",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-112",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 pm Monday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-113",
+      "category": "generated_variation",
+      "input": "Remind me to water plants Friday at 5 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "water plants",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-114",
+      "category": "generated_variation",
+      "input": "Remind me Monday at 10 am to pick up Ian",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-115",
+      "category": "generated_variation",
+      "input": "book cab at 8 am today",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "book cab",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-116",
+      "category": "generated_variation",
+      "input": "Set reminder for pay bill Friday 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-117",
+      "category": "generated_variation",
+      "input": "take medicine at 8 am tomorrow",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-118",
+      "category": "generated_variation",
+      "input": "Remind me to book cab next Tuesday at 10 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "book cab",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-119",
+      "category": "generated_variation",
+      "input": "Remind me to water plants next Tuesday at 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "water plants",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-120",
+      "category": "generated_variation",
+      "input": "Create alarm for 7 am Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-121",
+      "category": "generated_variation",
+      "input": "Set reminder for book cab today 10 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "book cab",
+        "eventDatePhrase": "today",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-122",
+      "category": "generated_variation",
+      "input": "Set reminder for check oven today 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "today",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-123",
+      "category": "generated_variation",
+      "input": "follow up with client at 9:30 pm next Tuesday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "follow up with client",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-124",
+      "category": "generated_variation",
+      "input": "Remind me to submit invoice Monday at 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-125",
+      "category": "generated_variation",
+      "input": "Set reminder for pick up Ian next Tuesday 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-126",
+      "category": "generated_variation",
+      "input": "Remind me next Tuesday at 5 pm to take medicine",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-127",
+      "category": "generated_variation",
+      "input": "Remind me to take medicine tomorrow at 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-128",
+      "category": "generated_variation",
+      "input": "Create alarm for 5 pm today",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "today",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-129",
+      "category": "generated_variation",
+      "input": "call Raj at 2 pm today",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "today",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-130",
+      "category": "generated_variation",
+      "input": "Remind me next Tuesday at 8 am to team meeting",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-131",
+      "category": "generated_variation",
+      "input": "Remind me Monday at 8 pm to pay bill",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-132",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 pm Monday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-133",
+      "category": "generated_variation",
+      "input": "Set reminder for submit invoice Monday 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-134",
+      "category": "generated_variation",
+      "input": "Remind me next Tuesday at 5 pm to follow up with client",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "follow up with client",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-135",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 pm Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-136",
+      "category": "generated_variation",
+      "input": "pay bill at 7 am Monday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-137",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 am Monday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-138",
+      "category": "generated_variation",
+      "input": "Remind me today at 7 am to call Raj",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "today",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-139",
+      "category": "generated_variation",
+      "input": "Remind me to submit invoice tomorrow at 9:30 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-140",
+      "category": "generated_variation",
+      "input": "Remind me next Tuesday at 9:30 pm to take medicine",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-141",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 am Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-142",
+      "category": "generated_variation",
+      "input": "take medicine at 8 pm Monday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-143",
+      "category": "generated_variation",
+      "input": "Create alarm for 2 pm Monday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-144",
+      "category": "generated_variation",
+      "input": "Create alarm for 7 am next Tuesday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-145",
+      "category": "generated_variation",
+      "input": "Remind me Friday at 2 pm to take medicine",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-146",
+      "category": "generated_variation",
+      "input": "team meeting at 7 am Friday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-147",
+      "category": "generated_variation",
+      "input": "Set reminder for pay bill next Tuesday 10 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-148",
+      "category": "generated_variation",
+      "input": "Remind me Monday at 9:30 pm to check oven",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-149",
+      "category": "generated_variation",
+      "input": "Create alarm for 2 pm Monday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-150",
+      "category": "generated_variation",
+      "input": "Create alarm for 10 am Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-151",
+      "category": "generated_variation",
+      "input": "Remind me to book cab today at 8 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "book cab",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-152",
+      "category": "generated_variation",
+      "input": "Set reminder for take medicine Friday 5 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-153",
+      "category": "generated_variation",
+      "input": "Remind me tomorrow at 5 pm to check oven",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-154",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 am next Tuesday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-155",
+      "category": "generated_variation",
+      "input": "Set reminder for pay bill Friday 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-156",
+      "category": "generated_variation",
+      "input": "follow up with client at 2 pm tomorrow",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "follow up with client",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-157",
+      "category": "generated_variation",
+      "input": "Remind me to check oven tomorrow at 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-158",
+      "category": "generated_variation",
+      "input": "Remind me Monday at 10 am to check oven",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-159",
+      "category": "generated_variation",
+      "input": "Set reminder for call Raj tomorrow 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-160",
+      "category": "generated_variation",
+      "input": "pick up Ian at 8 pm today",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-161",
+      "category": "generated_variation",
+      "input": "Remind me today at 9:30 pm to book cab",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "book cab",
+        "eventDatePhrase": "today",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-162",
+      "category": "generated_variation",
+      "input": "pay bill at 10 am tomorrow",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-163",
+      "category": "generated_variation",
+      "input": "Remind me to team meeting tomorrow at 10 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-164",
+      "category": "generated_variation",
+      "input": "Set reminder for book cab today 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "book cab",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-165",
+      "category": "generated_variation",
+      "input": "Remind me to pick up Ian tomorrow at 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-166",
+      "category": "generated_variation",
+      "input": "Remind me to water plants tomorrow at 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "water plants",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-167",
+      "category": "generated_variation",
+      "input": "Remind me to water plants Monday at 8 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "water plants",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-168",
+      "category": "generated_variation",
+      "input": "Remind me to team meeting today at 5 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "today",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-169",
+      "category": "generated_variation",
+      "input": "Set reminder for team meeting tomorrow 8 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-170",
+      "category": "generated_variation",
+      "input": "team meeting at 2 pm next Tuesday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "team meeting",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-171",
+      "category": "generated_variation",
+      "input": "Set reminder for take medicine Friday 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-172",
+      "category": "generated_variation",
+      "input": "Remind me to check oven today at 5 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "today",
+        "eventTimeText": "5:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-173",
+      "category": "generated_variation",
+      "input": "pay bill at 8 pm Friday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-174",
+      "category": "generated_variation",
+      "input": "call Raj at 10 am tomorrow",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-175",
+      "category": "generated_variation",
+      "input": "Set reminder for call Raj Friday 10 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-176",
+      "category": "generated_variation",
+      "input": "Create alarm for 7 am next Tuesday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-177",
+      "category": "generated_variation",
+      "input": "Create alarm for 2 pm Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-178",
+      "category": "generated_variation",
+      "input": "Remind me tomorrow at 10 am to take medicine",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-179",
+      "category": "generated_variation",
+      "input": "Create alarm for 7 am tomorrow",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-180",
+      "category": "generated_variation",
+      "input": "Remind me to follow up with client today at 8 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "follow up with client",
+        "eventDatePhrase": "today",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-181",
+      "category": "generated_variation",
+      "input": "Remind me to call Raj Friday at 7 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-182",
+      "category": "generated_variation",
+      "input": "check oven at 10 am Monday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-183",
+      "category": "generated_variation",
+      "input": "Remind me Monday at 8 am to take medicine",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "Monday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-184",
+      "category": "generated_variation",
+      "input": "Set reminder for pick up Ian tomorrow 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-185",
+      "category": "generated_variation",
+      "input": "Remind me next Tuesday at 8 pm to check oven",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-186",
+      "category": "generated_variation",
+      "input": "Remind me to check oven next Tuesday at 8 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-187",
+      "category": "generated_variation",
+      "input": "Set reminder for water plants Friday 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "water plants",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-188",
+      "category": "generated_variation",
+      "input": "water plants at 10 am next Tuesday",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "water plants",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "10 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-189",
+      "category": "generated_variation",
+      "input": "Remind me tomorrow at 8 am to call Raj",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-190",
+      "category": "generated_variation",
+      "input": "Remind me next Tuesday at 8 am to pay bill",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-191",
+      "category": "generated_variation",
+      "input": "Remind me to submit invoice Friday at 2 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "2:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-192",
+      "category": "generated_variation",
+      "input": "Remind me to submit invoice tomorrow at 8 am",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "submit invoice",
+        "eventDatePhrase": "tomorrow",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-193",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 pm next Tuesday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "next Tuesday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-194",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 pm Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-195",
+      "category": "generated_variation",
+      "input": "Remind me Friday at 9:30 pm to pay bill",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pay bill",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-196",
+      "category": "generated_variation",
+      "input": "Set reminder for call Raj Friday 8 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "call Raj",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-197",
+      "category": "generated_variation",
+      "input": "Remind me to pick up Ian Friday at 9:30 pm",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "pick up Ian",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-198",
+      "category": "generated_variation",
+      "input": "Remind me today at 7 am to take medicine",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "take medicine",
+        "eventDatePhrase": "today",
+        "eventTimeText": "7:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-199",
+      "category": "generated_variation",
+      "input": "check oven at 9:30 pm today",
+      "expected": {
+        "intent": "create_reminder",
+        "task": "check oven",
+        "eventDatePhrase": "today",
+        "eventTimeText": "9:30 pm",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "mvc-200",
+      "category": "generated_variation",
+      "input": "Create alarm for 8 am Friday",
+      "expected": {
+        "intent": "create_alarm",
+        "task": "Alarm",
+        "eventDatePhrase": "Friday",
+        "eventTimeText": "8:00 am",
+        "missing": []
+      },
+      "assistantShouldAsk": "",
+      "critical": true,
+      "tags": [
+        "generated"
+      ],
+      "notes": ""
+    }
+  ]
+};

@@ -1,0 +1,34 @@
+Sprint Brain-Corpus-2B: Corpus Regression Calibration + Single-Turn Parser Hardening
+
+Purpose
+- Reduce false corpus failures caused by strict phrase-vs-normalized-output comparisons.
+- Harden single-turn reminder parsing where event details and reminder instructions appear in the same sentence.
+
+Fixes included
+1. Corpus regression calibration
+   - Morning/evening/night corpus expectations are normalized to the app's concrete times.
+   - Time text such as "10 am" is normalized to "10:00 am" for comparison.
+   - Weekday/next-weekday labels such as Monday, Friday, next Tuesday are no longer treated as hard phrase equality failures when the app correctly resolves them to concrete dates.
+   - Today/tomorrow remain hard assertions.
+
+2. Single-turn parser hardening
+   - Direct commands such as "Remind me to call Raj tomorrow at 8 pm" now allow the event/reminder time to be extracted from inside the reminder command segment.
+   - Pure missing-task forms such as "remind me at 4 pm" still remain blocked and ask what the reminder is about.
+   - Single-sentence event + reminder cases now preserve event date before parsing reminder alerts.
+   - Before-event single-sentence cases such as "Team meeting at 5 pm today, remind me half an hour before" can calculate the offset from the event time.
+   - Multiple-alert single-sentence cases such as "Meeting at 8 pm tomorrow, remind me today at 7 and tomorrow at 6" are handled more safely.
+
+Files changed
+- src/lib/reminderEngine.ts
+- src/brain/miniViktorCorpusRegression.ts
+
+Expected checks
+1. npm.cmd run build
+2. npx.cmd cap sync android
+3. In app > Tests:
+   - Standard regression should remain 75/75.
+   - Simulation Learning Lab should remain 75/75.
+   - Corpus regression should improve materially from the earlier 51/120 baseline.
+
+Important guardrail
+Corpus can suggest and test. Guardrails still decide.

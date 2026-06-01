@@ -1,0 +1,20 @@
+Sprint Brain-Corpus-2: Corpus-Driven Regression + Retriever Wiring
+
+What this build adds:
+1. Bundles MiniViktor's 200-case reminder/alarm corpus into the active app package.
+2. Wires corpus cases into the local retriever so similar examples can support MiniViktor decisions.
+3. Adds corpus-driven regression runner in the Tests tab.
+4. Adds corpus summary and corpus JSONL copy support in the Tests tab.
+5. Adds corpus examples into the dataset export foundation.
+
+Important rule:
+Corpus can suggest. Guardrails decide.
+
+How to test:
+1. Run standard MiniViktor regression.
+2. Run corpus regression.
+3. Build dataset export.
+4. Copy corpus JSONL if needed.
+
+Hard note:
+Corpus regression is broader than the previous 75-case regression. It may reveal new failures. Treat failures as new hardening candidates, not as a reason to remove the corpus.

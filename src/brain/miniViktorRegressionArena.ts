@@ -1,16 +1,7 @@
 import { createEmptyDraft, createRemindersFromDraft, processUserText } from "../lib/reminderEngine";
 import type { ReminderDraft } from "../lib/reminderTypes";
 
-export type MiniViktorRegressionCategory =
-  | "candidate_compliance"
-  | "visible_inference"
-  | "event_vs_reminder"
-  | "before_event"
-  | "date_typo"
-  | "weekday"
-  | "past_guard"
-  | "multiple_dates"
-  | "general";
+export type MiniViktorRegressionCategory = string;
 
 export type MiniViktorExpectedAlert = {
   datePhrase?: string;

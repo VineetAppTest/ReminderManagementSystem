@@ -1,0 +1,29 @@
+RemindIQ Sprint Alarm-3B: Alarm Language + Relative Start UX Fix
+
+Tester feedback addressed:
+1. Generic alarm flows should not save/display the task as "create an alarm".
+2. Relative alarm follow-up such as "1 minute from now" should keep the draft as an alarm.
+3. Repeating alarm prompt should not say "Alarm will repeats every 1 hour".
+4. Save confirmation should say "I’ve set your alarm" instead of "I’ll remind you about create an alarm".
+
+Changes:
+- Added generic alarm task normalization.
+- Added alarm-specific confirmation copy.
+- Added repeat wording helper: "will repeat every..." / "It repeats every...".
+- Relative time follow-up now preserves alarm intent when the draft is already an alarm.
+- Saved generic alarm reminders now use title "Alarm" instead of command text.
+
+Validation:
+- npm run build passed.
+- npx cap sync android passed.
+
+Manual test phrases:
+1. create an alarm -> 1 minute from now -> save it
+2. Create a repeating alarm 1 min from now which will repeat every 1 hour -> After 1 minute from now -> save it
+
+Expected wording:
+- Sure — when should I set the alarm for?
+- Perfect — your alarm is set for today at <time>. Should I save this alarm, adjust it, or drop it?
+- Done — I’ve set your alarm for today at <time>.
+- The alarm will repeat every 1 hour. When should the first alarm start?
+- Done — I’ve set your alarm for today at <time>. It repeats every 1 hour.

@@ -1,0 +1,14 @@
+RemindIQ Sprint Alarm 3J P0 Repeat + Cancel Hotfix
+
+Included fixes:
+1. Treat “scrap that”, “scratch that”, “never mind”, and “leave it” as draft-cancel/start-over commands.
+2. Fix repeat reminder follow-up parsing for phrases such as:
+   - “repetition should be after 1 hour and alarm is for 1 minute from now”
+   - “create repeating alarm 1 minute from now receives everyone for today only”
+3. Preserve “today only” repeat-stop handling for hourly repeat alarms.
+4. Prefer explicit first-ring/start phrases over repeat-interval phrases so MiniViktor does not confuse “repeat every 1 hour” with the first alarm time.
+5. Refresh relative “from now” alarm due time at save time to reduce stale/past-time false blocks.
+
+Validation:
+- TypeScript no-emit validation passed.
+- Existing Sprint 3I UX/audio/full-screen alarm fixes are retained.

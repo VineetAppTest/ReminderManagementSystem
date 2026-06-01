@@ -1,0 +1,17 @@
+Sprint Brain-Corpus-2E: Final 1 Corpus Regression Fix
+
+Fix applied:
+- Added explicit support for recurring reminder phrasing:
+  "Every Monday at 8 am remind me for team standup"
+- The phrase now extracts task as "team standup" instead of incorrectly keeping "Every".
+- Weekly repeat detection now recognizes "every <weekday>" as a repeat intent.
+- Added a final safety correction so if task is still "Every" and a "remind me for/to/about" task exists, the task is replaced with the actual reminder task.
+
+Validation:
+- npm run build passed.
+- npx cap sync android passed.
+
+Expected test result:
+- Corpus regression: 120/120
+- Failed: 0
+- Critical failed: 0

@@ -1,0 +1,15 @@
+Consolidated build verification
+
+Build package: RemindIQ-Sprint-Alarm-3M-Consolidated-Post-3J-to-3L.zip
+Base source: RemindIQ-Sprint-Alarm-3L-Reminder-List-Voice-Polish.zip
+Coverage: Sprint 3J Repeat Cancel Hotfix through latest 3L build
+
+Local verification executed:
+1. npm ci --ignore-scripts --no-audit --no-fund
+2. npm run build
+
+Result: PASS
+
+Notes:
+- node_modules and dist are intentionally not included in the shared zip.
+- Rebuild locally using npm.cmd install / npm.cmd run build after extracting.

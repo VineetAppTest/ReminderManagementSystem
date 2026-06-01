@@ -1,0 +1,46 @@
+RemindIQ Sprint Alarm-3F: Mobile Overflow + Full-Screen Alarm Actions Fix
+
+Scope
+- Fix long assistant/user/voice phrases stretching the mobile chat viewport.
+- Improve native Android full-screen alarm readability and visual polish.
+- Make Snooze and Done/Stop actions clearly available on the full-screen alarm screen.
+
+Changes
+1. Mobile chat overflow hardening
+- Added overflow-x hidden to chat thread.
+- Added min-width: 0 to message rows and bubbles.
+- Added overflow-wrap:anywhere and word-break:break-word to message bubbles and message text.
+- Added max-width and box-sizing guards to chat, composer, voice message, transcript review and bubble elements.
+- This specifically targets phrases such as long captured Google Mic text and long MiniViktor confirmations.
+
+2. Native Android full-screen alarm redesign
+- Rebuilt RemindIqAlarmActivity UI with a darker gradient background.
+- Added scroll-safe layout so long alarm titles/body text do not break the screen.
+- Added stronger card panels for alarm title and body.
+- Added text shadow and higher-contrast saffron/green CTA colors.
+- Added explicit full-width buttons:
+  - Snooze 10 min
+  - Done / Stop
+
+3. Functionality confirmation
+- Snooze uses RemindIqRingingService.ACTION_SNOOZE and schedules a 10-minute snooze.
+- Done / Stop uses RemindIqRingingService.ACTION_STOP and stops ringing.
+
+Validation
+- npm run build: passed.
+- npx cap sync android: passed.
+- Android assembleDebug could not be completed in this sandbox because Gradle wrapper attempted to download from services.gradle.org and outbound internet is unavailable.
+
+Recommended user validation
+1. Apply patch.
+2. Run npm.cmd run build.
+3. Run npx.cmd cap sync android.
+4. Open Android Studio.
+5. Build APK / Run app.
+6. Test a long voice phrase:
+   create repeating alarm 1 minute from now receipts everyone for today only
+7. Trigger a native full-screen alarm and confirm:
+   - text is readable
+   - no horizontal overflow
+   - Snooze 10 min works
+   - Done / Stop works

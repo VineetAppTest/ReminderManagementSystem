@@ -1,0 +1,13 @@
+/*
+ * RemindIQ 3N.11.6
+ * Duplicate alarm surface disabled.
+ */
+.ri-alarm-page,
+.ri-alarm-page[role="dialog"],
+.ri-alarm-bg-pulse,
+.ri-alarm-card {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

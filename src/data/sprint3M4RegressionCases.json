@@ -1,0 +1,38 @@
+[
+  {
+    "id": "3M4-001",
+    "area": "Full-screen alarm Done",
+    "input": "create alarm 1 minute from now",
+    "expected": "Full-screen alarm opens, Done / Stop appears on the same screen, audio/vibration stops immediately, and no second control page opens."
+  },
+  {
+    "id": "3M4-002",
+    "area": "Full-screen alarm Snooze",
+    "input": "create alarm 1 minute from now",
+    "expected": "Full-screen alarm opens, Snooze 5/10 min appears on the same screen, alarm closes cleanly, audio stops, and a snoozed reminder is scheduled."
+  },
+  {
+    "id": "3M4-003",
+    "area": "Long title readability",
+    "input": "remind me to review the very long quarterly client escalation governance checklist tomorrow at 8 pm",
+    "expected": "Alarm title wraps inside the card without stretching the screen or becoming unreadable."
+  },
+  {
+    "id": "3M4-004",
+    "area": "Version visibility",
+    "input": "Open app home screen and trigger alarm screen",
+    "expected": "App header shows Sprint 3M.4 Corrective Build and alarm screen shows Sprint 3M.4."
+  },
+  {
+    "id": "3M4-005",
+    "area": "Repeat start vs repeat gap clarification",
+    "input": "Repeat reminder for today starting in 1 min",
+    "expected": "MiniViktor asks how often it should repeat instead of assuming a 1-minute repeat gap."
+  },
+  {
+    "id": "3M4-006",
+    "area": "Repeat interval follow-up",
+    "input": "every 1 hour",
+    "expected": "MiniViktor keeps first alarm as 1 minute from now and sets repeat gap as every 1 hour, today only when applicable."
+  }
+]

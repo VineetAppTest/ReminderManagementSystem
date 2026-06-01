@@ -1,0 +1,17 @@
+Sprint Alarm-2B Fix 2: Full-Screen Alarm Readability + Actions
+
+This build improves the native Android ringing alarm experience:
+
+1. Full-screen ringing screen now uses a high-contrast dark background.
+2. Reminder text is larger and easier to read on lock screen.
+3. Stop / Done is a large full-width green button.
+4. Snooze 10 min is a large full-width blue button.
+5. Both buttons are visible on the full-screen alarm view.
+6. Notification also uses BigTextStyle and alarm category for better lock-screen readability.
+
+Test on phone after uninstalling the old app:
+- Create reminder 2 minutes from now.
+- Lock phone.
+- Confirm ringing screen/readability.
+- Test Stop / Done.
+- Test Snooze 10 min.

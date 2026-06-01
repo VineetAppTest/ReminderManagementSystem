@@ -1,0 +1,10 @@
+RemindIQ Sprint Alarm 3J P0 Cancel Synonyms Add-on
+
+Added to existing Sprint 3J hotfix:
+- Expanded MiniViktor cancel/clear draft vocabulary beyond “scrap that”.
+- Supported clear/cancel phrases now include: scrap it, scrap this, scratch that, never mind, drop it, drop this, ignore it, forget it, discard it, delete it, remove it, clear draft, erase it, wipe it, abandon it, abort it, ditch it, skip it, not now, leave it, and related variants.
+- Applied handling in both app-level confirmation flow and reminder engine reset/cancel flow.
+- Added MiniViktor normalisation so dictation variants are converted into a draft-clear/start-over intent before reminder parsing.
+
+Validation:
+- npx tsc --noEmit PASSED

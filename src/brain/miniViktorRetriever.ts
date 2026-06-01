@@ -1,16 +1,8 @@
 import type { ReminderDraft } from "../lib/reminderTypes";
+import { getMiniViktorReminderCorpus } from "./miniViktorReminderCorpus";
+import type { MiniViktorCorpusCase } from "./miniViktorReminderCorpus";
 
-export type MiniViktorSolvedExampleCategory =
-  | "visible_inference"
-  | "candidate_compliance"
-  | "event_vs_reminder"
-  | "before_event"
-  | "date_typo"
-  | "weekday"
-  | "past_guard"
-  | "multiple_dates"
-  | "missing_detail"
-  | "general";
+export type MiniViktorSolvedExampleCategory = string;
 
 export type MiniViktorSolvedExample = {
   id: string;
@@ -148,6 +140,41 @@ const MINI_VIKTOR_SOLVED_EXAMPLES: MiniViktorSolvedExample[] = [
   },
 ];
 
+function corpusCaseToSolvedExample(item: MiniViktorCorpusCase): MiniViktorSolvedExample {
+  const expected = item.expected || {};
+  const expectedSummaryParts = [
+    expected.intent ? `Intent: ${String(expected.intent)}` : "",
+    expected.task ? `Task: ${String(expected.task)}` : "",
+    expected.eventDatePhrase ? `Date: ${String(expected.eventDatePhrase)}` : "",
+    expected.eventTimeText ? `Time: ${String(expected.eventTimeText)}` : "",
+    item.assistantShouldAsk ? `Ask: ${item.assistantShouldAsk}` : "",
+  ].filter(Boolean);
+
+  return {
+    id: item.id,
+    category: item.category,
+    title: item.input,
+    pattern: item.input,
+    turns: [item.input],
+    expectedSummary: expectedSummaryParts.join("; ") || JSON.stringify(expected),
+    tags: [...item.tags, item.category, item.critical ? "critical" : "non-critical"],
+  };
+}
+
+function getCorpusSolvedExamples(): MiniViktorSolvedExample[] {
+  return getMiniViktorReminderCorpus().items.map(corpusCaseToSolvedExample);
+}
+
+export function getMiniViktorSolvedExamples(): MiniViktorSolvedExample[] {
+  const seen = new Set<string>();
+  const combined = [...MINI_VIKTOR_SOLVED_EXAMPLES, ...getCorpusSolvedExamples()];
+  return combined.filter((example) => {
+    if (seen.has(example.id)) return false;
+    seen.add(example.id);
+    return true;
+  });
+}
+
 function normaliseForRetriever(text: string) {
   return text
     .toLowerCase()
@@ -194,7 +221,7 @@ export function retrieveMiniViktorExamples(
   draft: ReminderDraft | null,
   maxResults = 3
 ): MiniViktorRetrievedExample[] {
-  return MINI_VIKTOR_SOLVED_EXAMPLES
+  return getMiniViktorSolvedExamples()
     .map((example) => {
       const { score, matchedTokens } = scoreExample(query, draft, example);
       return { ...example, score, matchedTokens };
@@ -220,6 +247,3 @@ export function getMiniViktorRetrieverHints(examples: MiniViktorRetrievedExample
   };
 }
 
-export function getMiniViktorSolvedExamples() {
-  return MINI_VIKTOR_SOLVED_EXAMPLES;
-}

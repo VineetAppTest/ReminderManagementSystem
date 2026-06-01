@@ -1,0 +1,21 @@
+RemindIQ Sprint Alarm-3A: Repeating Alarm Visibility + Full-Screen Contrast Fix
+
+What changed
+1. Repeating alarms remain visible in the Reminders section instead of being archived after their first trigger.
+2. Repeating alarms show a visible "Repeating" chip and a "Next alarm" line.
+3. Added a "Stop repeat" action on repeating alarm cards.
+4. Stop repeat cancels the native Android alarm and marks the reminder done.
+5. In-app repeat fallback now advances the next due time for hourly, daily, and weekly repeats while the app is open.
+6. Android full-screen alarm screen now uses stronger contrast and shows body text separately.
+7. Android alarm notification no longer uses colorized mode, reducing the risk of unreadable same-color text.
+
+Validation performed
+- npm run build: passed
+- npx cap sync android: passed
+
+Mandatory tester checks
+1. Create a repeating alarm, e.g. "Set alarm every 1 hour" or "Repeat alarm every 30 minutes starting now".
+2. Confirm it appears in Reminders with a Repeating chip.
+3. Confirm Stop repeat is visible.
+4. Tap Stop repeat and confirm it moves to Done and stops native scheduling.
+5. Trigger a full-screen alarm and confirm text is readable.

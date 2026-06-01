@@ -5,6 +5,7 @@ import type {
   ReminderAlert,
   ReminderCategory,
   ReminderDraft,
+  ReminderRepeatRule,
   SaveResult,
 } from "./reminderTypes";
 import { classifyMiniViktorIntent, normaliseWithMiniViktor } from "../brain/miniViktorIntentEngine";
@@ -43,11 +44,32 @@ export function createEmptyDraft(): ReminderDraft {
     pendingAmbiguousTime: null,
     pendingInferenceConfirmation: null,
     lastQuestion: null,
+    repeatRule: null,
+    isAlarm: false,
+    pendingRepeatQuestion: null,
   };
 }
 
+function normaliseRepeatVoiceArtifacts(input: string) {
+  let text = input;
+
+  // Google voice frequently hears "every 1 hour" / "every one hour" as "everyone".
+  // Keep this correction scoped to repeat/alarm contexts so normal wording is not changed.
+  if (/\b(repeat|repeating|repetitive|recurring|alarm)\b/i.test(text)) {
+    text = text
+      .replace(/\b(?:repeats?|receipts?|receives?)\s+after\s+every\s+one\b/gi, "repeats every 1 hour")
+      .replace(/\b(?:repeats?|receipts?|receives?)\s+after\s+everyone\b/gi, "repeats every 1 hour")
+      .replace(/\b(?:repeats?|receipts?|receives?)\s+every\s+one\b/gi, "repeats every 1 hour")
+      .replace(/\b(?:repeats?|receipts?|receives?)\s+everyone\b/gi, "repeats every 1 hour")
+      .replace(/\bevery\s+one\b/gi, "every 1 hour")
+      .replace(/\beveryone\b/gi, "every 1 hour");
+  }
+
+  return text;
+}
+
 export function normaliseInput(input: string) {
-  return normaliseWithMiniViktor(input);
+  return normaliseRepeatVoiceArtifacts(normaliseWithMiniViktor(input));
 }
 
 function startOfDay(date: Date) {
@@ -195,6 +217,59 @@ function parseDate(text: string): { date: Date; assumed?: boolean } | null {
   return null;
 }
 
+function wordOrNumberToInt(value: string | undefined) {
+  if (!value) return null;
+  const lower = value.toLowerCase();
+  if (/^\d+$/.test(lower)) return Number(lower);
+  return WORD_NUMBERS[lower] || null;
+}
+
+function parseRelativeFromNow(input: string, now: Date) {
+  const lower = normaliseInput(input).toLowerCase();
+
+  // Guardrail: “15/30/45 minutes before” belongs to before-event offset logic,
+  // not relative-from-now scheduling. Without this, MiniViktor treats
+  // “5 pm, remind me 30 minutes before” as “30 minutes from now”
+  // and loses the actual event time.
+  if (/\b(?:\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(?:seconds?|secs?|sec|minutes?|mins?|min|hours?|hrs?|hr)\s+before\b/i.test(lower)) {
+    return null;
+  }
+
+  const match =
+    lower.match(/\b(?:in|after|for)?\s*(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(seconds?|secs?|sec)\s*(?:from now|later)?\b/) ||
+    lower.match(/\b(?:in|after|for)?\s*(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(minutes?|mins?|min)\s*(?:from now|later)?\b/) ||
+    lower.match(/\b(?:in|after|for)?\s*(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(hours?|hrs?|hr)\s*(?:from now|later)?\b/);
+  if (!match) return null;
+  const amount = wordOrNumberToInt(match[1]);
+  if (!amount || amount <= 0) return null;
+  const unit = match[2].toLowerCase();
+  const seconds = unit.startsWith("h") ? amount * 3600 : unit.startsWith("m") ? amount * 60 : amount;
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  const due = new Date(now.getTime() + seconds * 1000);
+  return { due, minutes, seconds };
+}
+
+
+function parseRepeatStartRelative(input: string, now: Date) {
+  const lower = normaliseInput(input).toLowerCase();
+
+  // In repeat commands, "after 1 hour" can describe the repeat interval,
+  // while "alarm is for 1 minute from now" describes the first ring.
+  // Prefer the explicit start/first-ring phrase so we do not schedule the
+  // first alarm for the repeat interval by mistake.
+  const explicitStart =
+    lower.match(/\b(?:first\s+)?(?:alarm|start|starting|starts|start time|first due)\s*(?:is\s+for|is|should\s+be|at|for|from)?\s*(?:within\s*)?(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(seconds?|secs?|sec|minutes?|mins?|min|hours?|hrs?|hr)\s*(?:from now|later)?\b/i) ||
+    lower.match(/\b(?:in|after|within)\s*(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(seconds?|secs?|sec|minutes?|mins?|min|hours?|hrs?|hr)\s*(?:from now|later)?\b/i);
+
+  if (!explicitStart) return null;
+  const amount = wordOrNumberToInt(explicitStart[1]);
+  if (!amount || amount <= 0) return null;
+  const unit = explicitStart[2].toLowerCase();
+  const seconds = unit.startsWith("h") ? amount * 3600 : unit.startsWith("m") ? amount * 60 : amount;
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  return { due: new Date(now.getTime() + seconds * 1000), minutes, seconds };
+}
+
 type TimeToken = {
   raw: string;
   hour: number;
@@ -238,6 +313,21 @@ function parseOneTimeToken(text: string): TimeToken | null {
     const minute = numeric[2] ? Number(numeric[2].padEnd(2, "0").slice(0, 2)) : 0;
     const period = numeric[3] ? (numeric[3].replace(/\./g, "") as "am" | "pm") : null;
     const approximate = approxPrefix || /ish|-ish/.test(numeric[0]);
+
+    // Native speech sometimes produces invalid mixed forms such as
+    // "21:15 pm". Treat 24-hour values as explicit 24-hour time and
+    // ignore the redundant AM/PM suffix instead of falling back to an old draft.
+    if (hour >= 13 && hour <= 23 && minute >= 0 && minute <= 59) {
+      return {
+        raw: numeric[0],
+        hour,
+        minute,
+        period: hour >= 12 ? "pm" : "am",
+        hasPeriod: true,
+        approximate,
+      };
+    }
+
     if (hour >= 1 && hour <= 12 && minute >= 0 && minute <= 59) {
       return {
         raw: numeric[0],
@@ -293,6 +383,61 @@ function hasDinnerContext(text: string) {
 
 function hasMorningContext(text: string) {
   return /\b(breakfast|morning|school)\b/i.test(text);
+}
+
+function canUseSoftMealTimeInference(token: TimeToken) {
+  // “lunch at 1:10” is reasonably resolvable to PM, but “lunch at 2”
+  // is intentionally ambiguous and should ask AM/PM.
+  return token.minute > 0 || /\b(noon|midnight|morning|afternoon|evening|night)\b/i.test(token.raw);
+}
+
+function hasWakeUpIntent(text: string) {
+  return /\bwake\s+me\s+up\b/i.test(normaliseInput(text));
+}
+
+function voiceShortcutTimeToken(text: string): TimeToken | null {
+  const lower = normaliseInput(text).toLowerCase();
+  if (/\batm\b/.test(lower)) {
+    return { raw: "ATM", hour: 8, minute: 0, period: "pm", hasPeriod: true };
+  }
+  if (/\bmeter\b/.test(lower)) {
+    return { raw: "meter", hour: 6, minute: 0, period: null, hasPeriod: false };
+  }
+  return null;
+}
+
+function isAlarmCommand(text: string) {
+  return /\b(alarm|wake\s+me\s+up)\b/i.test(normaliseInput(text));
+}
+
+function extractAlarmTaskFromInput(input: string) {
+  const text = normaliseInput(input).trim();
+  if (hasWakeUpIntent(text)) return "Wake up";
+
+  const dailyFor = text.match(/\b(?:set|create|start|make)?\s*(?:a\s+)?(?:daily|weekly|repeating|repetitive|recurring)?\s*alarm\s+for\s+(.+?)\s+at\s+\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\b/i);
+  if (dailyFor) {
+    const task = stripNoiseFromTask(dailyFor[1]);
+    if (task) return task;
+  }
+
+  return null;
+}
+
+function extractEveryReminderTask(input: string) {
+  const text = normaliseInput(input).trim();
+  const forMatch = text.match(/\bevery\s+.+?\s+remind\s+me\s+(?:for|to|about)\s+(.+)$/i);
+  if (forMatch) {
+    const task = stripNoiseFromTask(forMatch[1]);
+    if (task) return task;
+  }
+
+  const toMatch = text.match(/\bremind\s+me\s+every\s+.+?\s+to\s+(.+)$/i);
+  if (toMatch) {
+    const task = stripNoiseFromTask(toMatch[1]);
+    if (task) return task;
+  }
+
+  return null;
 }
 
 function resolveBareTimeCandidates(token: TimeToken) {
@@ -380,7 +525,7 @@ function to24Hour(token: TimeToken, context: {
     }
   }
 
-  if (context.phrase && hasDinnerContext(context.phrase)) {
+  if (context.phrase && hasDinnerContext(context.phrase) && canUseSoftMealTimeInference(token)) {
     const hour = token.hour === 12 ? 12 : token.hour + 12;
     return { hour, minute: token.minute, needsAMPM: false, inferred: false };
   }
@@ -415,13 +560,170 @@ function offsetMinutes(text: string): number | null {
   if (/\ban hour before\b|\bone hour before\b|\b1 hour before\b/.test(lower)) return 60;
   if (/\bquarter of an hour before\b/.test(lower)) return 15;
 
-  const minutes = lower.match(/\b(\d{1,3})\s*(minutes|minute|mins|min)\s+before\b/);
-  if (minutes) return Number(minutes[1]);
+  const minutes = lower.match(/\b(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(minutes|minute|mins|min)\s+before\b/);
+  if (minutes) return wordOrNumberToInt(minutes[1]) || null;
 
-  const hours = lower.match(/\b(\d{1,2})\s*(hours|hour|hrs|hr)\s+before\b/);
-  if (hours) return Number(hours[1]) * 60;
+  const hours = lower.match(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(hours|hour|hrs|hr)\s+before\b/);
+  if (hours) return (wordOrNumberToInt(hours[1]) || 0) * 60;
 
   return null;
+}
+
+
+function isRepeatIntent(text: string) {
+  return /\b(repeat|repeats|repeating|repetitive|repetition|repeaters?|repeater|recurring|daily|weekly|every\s+\d+\s*(hour|hours|hr|hrs|minute|minutes|min|mins)|every\s+(sun|sunday|mon|monday|tue|tues|tuesday|wed|wednesday|thu|thurs|thursday|fri|friday|sat|saturday)|interval)\b/i.test(text);
+}
+
+function repeatLabel(rule: ReminderRepeatRule | null | undefined) {
+  return rule?.label || "Does not repeat";
+}
+
+function hasTodayOnlyRepeatStop(text: string) {
+  return /\b(today\s+only|only\s+today|for\s+today\s+only|just\s+today|this\s+day\s+only|current\s+day\s+only)\b/i.test(text);
+}
+
+function isBareTodayOnlyAnswer(text: string) {
+  return /^(today|today only|only today|for today|for today only|just today)$/i.test(text.trim());
+}
+
+function withTodayOnlyRepeatStop(rule: ReminderRepeatRule, now: Date): ReminderRepeatRule {
+  const todayISO = dateOnlyISO(now);
+  const suffix = /today only/i.test(rule.label) ? "" : " · today only";
+  return {
+    ...rule,
+    endDateISO: todayISO,
+    endDatePhrase: "today",
+    label: `${rule.label}${suffix}`,
+  };
+}
+
+function weekdayNumberFromText(text: string): number | null {
+  const lower = text.toLowerCase();
+  const map: Record<string, number> = {
+    sunday: 0, sun: 0,
+    monday: 1, mon: 1,
+    tuesday: 2, tue: 2, tues: 2,
+    wednesday: 3, wed: 3,
+    thursday: 4, thu: 4, thurs: 4,
+    friday: 5, fri: 5,
+    saturday: 6, sat: 6,
+  };
+  for (const [key, value] of Object.entries(map)) {
+    if (new RegExp(`\\b${key}\\b`, "i").test(lower)) return value;
+  }
+  return null;
+}
+
+function weekdayName(day: number) {
+  return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][day] || "the selected day";
+}
+
+function parseRepeatRule(input: string): { rule: ReminderRepeatRule | null; needsStart?: boolean; needsKind?: boolean; defaultAlarm?: boolean } {
+  const lower = normaliseInput(input).toLowerCase();
+  if (!isRepeatIntent(lower)) return { rule: null };
+
+  const interval = lower.match(/\b(?:every|interval(?: of)?|with|(?:at\s+)?gap\s+of)\s+(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(hours?|hrs?|hr|minutes?|mins?|min)\b/);
+  const repeatAfterInterval = lower.match(/\b(?:repeat(?:ing|itive)?|repetition|repeaters?|repeater|ring)\s*(?:alarm|reminder)?\s*(?:should\s+be|is|will\s+be)?\s*(?:after|every)\s+(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(hours?|hrs?|hr|minutes?|mins?|min)\b/);
+  // Guardrail: “starting in 1 minute” / “start in 1 min” is the first ring time,
+  // not the repeat gap. MiniViktor must ask for the gap instead of assuming every 1 minute.
+  const intervalMatch = interval || repeatAfterInterval;
+  if (intervalMatch) {
+    const amount = wordOrNumberToInt(intervalMatch[1]);
+    if (amount) {
+      const unit = intervalMatch[2].toLowerCase();
+      const minutes = unit.startsWith("h") ? amount * 60 : amount;
+      const rule: ReminderRepeatRule = {
+        kind: "hourly",
+        intervalMinutes: minutes,
+        label: minutes === 60 ? "Repeats every 1 hour" : minutes % 60 === 0 ? `Repeats every ${minutes / 60} hours` : `Repeats every ${minutes} minutes`,
+      };
+      return {
+        rule: hasTodayOnlyRepeatStop(lower) ? withTodayOnlyRepeatStop(rule, new Date()) : rule,
+        needsStart: !parseRepeatStartRelative(lower, new Date()) && !parseRelativeFromNow(lower, new Date()),
+        defaultAlarm: true,
+      };
+    }
+  }
+
+
+  if (/\bdaily or weekly\b|\bweekly or daily\b/.test(lower)) {
+    return { rule: null, needsKind: true, defaultAlarm: true };
+  }
+
+  if (/\bdaily\b|\bevery day\b/.test(lower)) {
+    const rule: ReminderRepeatRule = { kind: "daily", intervalMinutes: 24 * 60, label: "Repeats daily" };
+    return {
+      rule: hasTodayOnlyRepeatStop(lower) ? withTodayOnlyRepeatStop(rule, new Date()) : rule,
+      defaultAlarm: true,
+    };
+  }
+
+  if (/\bweekly\b|\bevery week\b|\bevery\s+(sun|sunday|mon|monday|tue|tues|tuesday|wed|wednesday|thu|thurs|thursday|fri|friday|sat|saturday)\b/.test(lower)) {
+    const weekday = weekdayNumberFromText(lower);
+    const everyReminderTask = extractEveryReminderTask(input);
+    const rule: ReminderRepeatRule = {
+      kind: "weekly",
+      intervalMinutes: 7 * 24 * 60,
+      daysOfWeek: weekday === null ? [] : [weekday],
+      label: weekday === null ? "Repeats weekly" : `Repeats weekly on ${weekdayName(weekday)}`,
+    };
+    return {
+      rule: hasTodayOnlyRepeatStop(lower) ? withTodayOnlyRepeatStop(rule, new Date()) : rule,
+      defaultAlarm: everyReminderTask ? false : true,
+    };
+  }
+
+
+  return { rule: null, needsKind: true, defaultAlarm: true };
+}
+
+function nextDailyAt(token: TimeToken, now: Date) {
+  const resolved = to24Hour(token, { now, phrase: "daily alarm", alertDateISO: dateOnlyISO(now) });
+  if (resolved.needsAMPM) return null;
+  const due = startOfDay(now);
+  due.setHours(resolved.hour, resolved.minute, 0, 0);
+  if (due.getTime() <= now.getTime()) due.setDate(due.getDate() + 1);
+  return due;
+}
+
+function nextWeeklyAt(token: TimeToken, weekday: number, now: Date) {
+  const today = startOfDay(now);
+  let add = weekday - today.getDay();
+  if (add < 0) add += 7;
+  const due = new Date(today.getTime() + add * MS_DAY);
+  const resolved = to24Hour(token, { now, phrase: "weekly alarm", alertDateISO: dateOnlyISO(due) });
+  if (resolved.needsAMPM) return null;
+  due.setHours(resolved.hour, resolved.minute, 0, 0);
+  if (due.getTime() <= now.getTime()) due.setDate(due.getDate() + 7);
+  return due;
+}
+
+function applyRepeatDueFromInput(draft: ReminderDraft, input: string, now: Date) {
+  if (!draft.repeatRule || draft.alerts.length > 0) return draft;
+  const tokens = extractTimeTokens(input);
+  const token = tokens[0];
+  if (!token) return draft;
+
+  let due: Date | null = null;
+  if (draft.repeatRule.kind === "daily") {
+    due = nextDailyAt(token, now);
+    if (due && draft.repeatRule) {
+      draft.repeatRule = { ...draft.repeatRule, timeText: formatTime(due.getHours(), due.getMinutes()), label: `Repeats daily at ${formatTime(due.getHours(), due.getMinutes())}` };
+    }
+  }
+  if (draft.repeatRule.kind === "weekly") {
+    const weekday = draft.repeatRule.daysOfWeek?.[0] ?? weekdayNumberFromText(input) ?? now.getDay();
+    due = nextWeeklyAt(token, weekday, now);
+    if (due && draft.repeatRule) {
+      draft.repeatRule = { ...draft.repeatRule, daysOfWeek: [weekday], timeText: formatTime(due.getHours(), due.getMinutes()), label: `Repeats weekly on ${weekdayName(weekday)} at ${formatTime(due.getHours(), due.getMinutes())}` };
+    }
+  }
+  if (due) {
+    draft.alerts = [createAlert(dateOnlyISO(due), due.getHours(), due.getMinutes())];
+    draft.eventDateISO = dateOnlyISO(due);
+    draft.eventDatePhrase = datePhrase(due);
+  }
+  return draft;
 }
 
 function deriveCategory(text: string, learning?: LearningMemory): ReminderCategory {
@@ -455,11 +757,43 @@ function deriveCategory(text: string, learning?: LearningMemory): ReminderCatego
   return "General";
 }
 
+
+function extractTaskFromReminderCommand(input: string) {
+  const text = input.trim();
+
+  // Voice-friendly command handling:
+  // “Remind me to test alarm at 6:42 pm” -> “test alarm”
+  // “Remind me at 2 pm for cooking” -> “cooking”
+  // “Set a reminder for 1:15 pm today” -> no task yet, ask what to remind about.
+  const direct = text.match(/^(?:remind me|set(?: a)? reminder|create(?: a)? reminder)\s*(?:to|for|about)?\s*(.*)$/i);
+  if (!direct) return null;
+
+  const remainder = direct[1].trim();
+  if (!remainder) return null;
+
+  const afterTimeFor = remainder.match(/^(?:at\s*)?\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\s+(?:for|to|about)\s+(.+)$/i);
+  let task = afterTimeFor ? afterTimeFor[1] : remainder;
+
+  task = stripNoiseFromTask(task) || "";
+  task = task
+    .replace(/^to\s+/i, "")
+    .replace(/^for\s+/i, "")
+    .replace(/^about\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Reject fragments created by incomplete/misheard commands like
+  // “set a reminder for 1 or”. MiniViktor should ask for the missing task,
+  // not save “set a” as the reminder title.
+  if (!task || /^(set|set a|a|or|for|to|about|something)$/i.test(task)) return null;
+  return task;
+}
+
 function stripNoiseFromTask(input: string) {
   let task = input;
 
   task = task
-    .replace(/\b(remind me|reminder|need(?: a)? reminder|notify me|alert me)\b.*$/i, "")
+    .replace(/\b(remind me|set(?: a)? reminder|create(?: a)? reminder|reminder|need(?: a)? reminder|notify me|alert me)\b.*$/i, "")
     .replace(/\bbut need\b.*$/i, "")
     .replace(/\bhowever need\b.*$/i, "")
     .replace(/\bas .*?\bis at\s+\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/i, "")
@@ -469,6 +803,7 @@ function stripNoiseFromTask(input: string) {
     .replace(/\bthe\s+\d{1,2}(st|nd|rd|th)?\b/gi, "")
     .replace(/\bat\s+\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)?/gi, "")
     .replace(/\b\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)\b/gi, "")
+    .replace(/\b(?:\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(?:minutes?|mins?|min|hours?|hrs?|hr)\s+before\b/gi, "")
     .replace(/\bhalf an hour before\b|\bhalf hour before\b|\ban hour before\b|\bone hour before\b|\bquarter of an hour before\b/gi, "")
     .replace(/[.,;:]+$/g, "")
     .replace(/\s+[.,;:]+/g, "")
@@ -476,18 +811,18 @@ function stripNoiseFromTask(input: string) {
     .replace(/\s+/g, " ")
     .trim();
 
-  if (/^(reminder|remind me|set reminder)$/i.test(task)) return "";
+  if (/^(reminder|remind me|set reminder|set a reminder|set a|something|or)$/i.test(task)) return "";
   return task;
 }
 
 function titleFromAsCommand(input: string) {
-  const match = input.match(/\b(?:save it as|call it|make it|name it)\s+(.+)$/i);
+  const match = input.match(/\b(?:save it as|call it|make it|name it|rename it|title it|name(?:\s+the)?(?:\s+(?:alarm|reminder))?\s+as|call(?:\s+the)?(?:\s+(?:alarm|reminder))?\s+as)\s+(.+)$/i);
   if (!match) return null;
   return stripNoiseFromTask(match[1]) || match[1].trim();
 }
 
 function extractReminderSegment(input: string): string | null {
-  const match = input.match(/\b(?:remind me|reminder|need(?: a)? reminder|notify me|alert me)\b(.*)$/i);
+  const match = input.match(/\b(?:remind me|set(?: a)? reminder|create(?: a)? reminder|reminder|need(?: a)? reminder|notify me|alert me)\b(.*)$/i);
   if (!match) return null;
   return match[1].trim();
 }
@@ -510,9 +845,24 @@ function explicitEventTime(input: string, draft: ReminderDraft): TimeToken | nul
   const tokens = extractTimeTokens(beforeReminder);
   if (tokens.length > 0) return tokens[0];
 
+  const shortcutToken = voiceShortcutTimeToken(beforeReminder);
+  if (shortcutToken) return shortcutToken;
+
+  // Corpus-hardening: direct one-shot commands such as
+  // “Remind me to call Raj tomorrow at 8 pm” contain the event/reminder time
+  // inside the reminder command segment. Earlier logic skipped that segment,
+  // leaving eventTimeText blank. Only use the full input when the command also
+  // carries a real task; pure forms like “remind me at 4 pm” must still ask
+  // what the reminder is about.
+  const commandTask = extractTaskFromReminderCommand(input);
+  if (!draft.eventTimeText && commandTask && !isTimeOnlyTaskCandidate(commandTask)) {
+    const all = extractTimeTokens(input);
+    return all[0] || voiceShortcutTimeToken(input) || null;
+  }
+
   if (!draft.eventTimeText && !reminderSegment) {
     const all = extractTimeTokens(input);
-    return all[0] || null;
+    return all[0] || voiceShortcutTimeToken(input) || null;
   }
 
   return null;
@@ -537,12 +887,28 @@ function applyEventTime(draft: ReminderDraft, token: TimeToken, sourcePhrase: st
   }
 
   const eventDateISO = dateISO || null;
+  const previousEventAt = draft.eventAt;
   const eventAt = eventDateISO ? combineDateAndTime(eventDateISO, resolved.hour, resolved.minute).toISOString() : null;
+
+  // If the only alert was the event-time default, changing the event time must
+  // move that default alert too. Otherwise MiniViktor says "updated to 5:15"
+  // while still carrying the old 5:14 event in the draft.
+  let alerts = draft.alerts;
+  const hadDefaultEventAlert = Boolean(
+    previousEventAt &&
+    draft.alerts.length === 1 &&
+    Math.abs(new Date(draft.alerts[0].dueAt).getTime() - new Date(previousEventAt).getTime()) < 1000
+  );
+  if (hadDefaultEventAlert && eventDateISO && eventAt) {
+    const changedEvent = new Date(eventAt);
+    alerts = [createAlert(eventDateISO, changedEvent.getHours(), changedEvent.getMinutes())];
+  }
 
   return {
     ...draft,
     eventTimeText: formatTime(resolved.hour, resolved.minute),
     eventAt,
+    alerts,
     pendingAmbiguousTime: null,
   };
 }
@@ -559,6 +925,36 @@ function createAlert(dateISO: string, hour: number, minute: number, approximate 
     approximate,
     inferredPeriod,
     inferredReason,
+  };
+}
+
+function createRelativeAlertFromDue(due: Date, approximate = false): ReminderAlert {
+  const dateISO = dateOnlyISO(due);
+  return {
+    id: safeId(),
+    dateISO,
+    dateLabel: dateLabel(due),
+    datePhrase: datePhrase(due),
+    timeText: `${approximate ? "around " : ""}${formatTime(due.getHours(), due.getMinutes())}`,
+    dueAt: due.toISOString(),
+    approximate,
+  };
+}
+
+function isRelativeFromNowText(text: string) {
+  return Boolean(parseRelativeFromNow(text, new Date()));
+}
+
+function refreshRelativeDraftDue(draft: ReminderDraft, now: Date): ReminderDraft {
+  const relative = parseRepeatStartRelative(draft.rawText, now) || parseRelativeFromNow(draft.rawText, now);
+  if (!relative || draft.alerts.length === 0) return draft;
+
+  const alert = createRelativeAlertFromDue(relative.due, false);
+  return {
+    ...draft,
+    alerts: [alert],
+    eventDateISO: alert.dateISO,
+    eventDatePhrase: alert.datePhrase,
   };
 }
 
@@ -673,6 +1069,25 @@ function applyBeforeOffset(draft: ReminderDraft, sourceText: string): ReminderDr
   };
 }
 
+function isGenericAlarmTask(task: string) {
+  return /^alarm$/i.test(task.trim());
+}
+
+function isAlarmIntentOnly(input: string) {
+  const lower = normaliseInput(input).toLowerCase().trim();
+  return /^(create|set|start|make)\s+(an?\s+)?alarm$/.test(lower) || /^alarm$/.test(lower);
+}
+
+function isTimeOnlyTaskCandidate(task: string) {
+  const lower = normaliseInput(task).toLowerCase().trim();
+  if (!lower) return true;
+  if (/^(today|tomorrow|day after tomorrow)$/.test(lower)) return true;
+  if (/^(in|after|for)?\s*\d{1,3}\s*(seconds?|secs?|sec|minutes?|mins?|min|hours?|hrs?|hr)\s*(from now|later)?$/.test(lower)) return true;
+  if (/^\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(am|pm|a\.m\.|p\.m\.)?$/.test(lower)) return true;
+  if (/^(at\s+)?\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(am|pm|a\.m\.|p\.m\.)?\s*(today|tomorrow)?$/.test(lower)) return true;
+  return false;
+}
+
 function hasPastAlert(alerts: ReminderAlert[]) {
   const now = Date.now();
   return alerts.some((alert) => new Date(alert.dueAt).getTime() <= now);
@@ -685,6 +1100,7 @@ function missingSlots(draft: ReminderDraft) {
   if (!draft.eventDateISO && draft.alerts.length === 0) missing.push("the day");
   if (draft.pendingAmbiguousTime) missing.push("AM or PM");
   if (draft.pendingInferenceConfirmation) missing.push("confirmation for inferred AM/PM");
+  if (draft.pendingRepeatQuestion) missing.push("repeat details");
   if (draft.alerts.length === 0 && !draft.pendingAmbiguousTime) missing.push("the reminder time");
   return missing;
 }
@@ -760,7 +1176,29 @@ function responseForDraft(draft: ReminderDraft): string {
     return `I’m reading that as ${alertText} ${reasonText}. Is that correct?`;
   }
 
+  if (draft.pendingRepeatQuestion === "repeat_kind") {
+    return "Should this repeat daily or weekly, and what time should it ring?";
+  }
+
+  if (draft.pendingRepeatQuestion === "repeat_interval") {
+    const startText = draft.alerts.length ? ` starting ${draft.alerts[0].datePhrase} at ${draft.alerts[0].timeText}` : "";
+    const scopeText = hasTodayOnlyRepeatStop(draft.rawText) || draft.repeatRule?.endDatePhrase === "today" ? " for today only" : "";
+    return `Got it${startText}${scopeText}. How often should it repeat? For example: every 30 minutes or every 1 hour.`;
+  }
+
+  if (draft.pendingRepeatQuestion === "repeat_start") {
+    return `${draft.task || "Alarm"} will ${repeatLabel(draft.repeatRule).toLowerCase()}. When should the first alarm start?`;
+  }
+
+  if (draft.pendingRepeatQuestion === "repeat_time") {
+    return `${draft.task || "Alarm"} will ${repeatLabel(draft.repeatRule).toLowerCase()}. What time should it ring?`;
+  }
+
   if (!draft.task.trim()) {
+    if (draft.alerts.length > 0) {
+      const alertText = draft.alerts.map((alert) => `${alert.datePhrase} at ${alert.timeText}`).join(" and ");
+      return `Sure — what should I remind you about ${alertText}?`;
+    }
     const datePart = draft.eventDatePhrase ? ` ${draft.eventDatePhrase}` : "";
     const timePart = draft.eventTimeText ? ` at ${draft.eventTimeText}` : "";
     return `Sure — what should I remind you about${datePart}${timePart}?`;
@@ -774,8 +1212,11 @@ function responseForDraft(draft: ReminderDraft): string {
       ? `I have the reminder alert${draft.alerts.length > 1 ? "s" : ""} as ${alertText}. Which day is ${draft.task} itself at ${draft.eventTimeText}?`
       : `Which day is ${draft.task} at ${draft.eventTimeText}?`;
   }
+  if (isGenericAlarmTask(draft.task) && draft.alerts.length === 0 && !draft.eventTimeText) {
+    return "Sure — when should I set the alarm for?";
+  }
   if (missing.includes("the day")) return "Sure — which day should I set this for?";
-  if (missing.includes("the reminder time")) return "Got it. What time works for this reminder?";
+  if (missing.includes("the reminder time")) return isGenericAlarmTask(draft.task) ? "What time should I set the alarm for?" : "Got it. What time works for this reminder?";
 
   if (hasPastAlert(draft.alerts)) {
     return "One of those reminder times has already passed. Please choose a future time for that reminder.";
@@ -787,9 +1228,10 @@ function responseForDraft(draft: ReminderDraft): string {
 
   if (draft.alerts.length > 1) {
     const alertText = draft.alerts.map((alert) => `${alert.datePhrase} at ${alert.timeText}`).join(" and ");
+    const repeatText = draft.repeatRule ? ` ${repeatLabel(draft.repeatRule)}.` : "";
     return draft.eventAt
-      ? `Got it — ${draft.task} is ${eventText}. You want reminders ${alertText}. Should I save these reminders, adjust them, or drop them?`
-      : `Got it — you want reminders ${alertText} for ${draft.task}. Should I save these reminders, adjust them, or drop them?`;
+      ? `Got it — ${draft.task} is ${eventText}. You want reminders ${alertText}.${repeatText} Should I save these reminders, adjust them, or drop them?`
+      : `Got it — you want reminders ${alertText} for ${draft.task}.${repeatText} Should I save these reminders, adjust them, or drop them?`;
   }
 
   const alert = draft.alerts[0];
@@ -798,20 +1240,30 @@ function responseForDraft(draft: ReminderDraft): string {
     new Date(draft.eventAt as string).getTime() === new Date(alert.dueAt).getTime();
 
   if (draft.eventAt && eventAndReminderSame) {
-    return `${draft.task} is ${eventText}. I’ll remind you at the event time unless you want an earlier reminder. Should I save this reminder, adjust it, or drop it?`;
+    const repeatText = draft.repeatRule ? ` ${repeatLabel(draft.repeatRule)}.` : "";
+    return `${draft.task} is ${eventText}. I’ll remind you at the event time unless you want an earlier reminder.${repeatText} Should I save this reminder, adjust it, or drop it?`;
   }
 
   if (draft.eventAt && draft.eventTimeText !== alert.timeText.replace("around ", "")) {
-    return `Got it — I’ll remind you about ${draft.task} ${alert.datePhrase} at ${alert.timeText}. The event is at ${draft.eventTimeText}. Should I save this reminder, adjust it, or drop it?`;
+    const repeatText = draft.repeatRule ? ` ${repeatLabel(draft.repeatRule)}.` : "";
+    return `Got it — I’ll remind you about ${draft.task} ${alert.datePhrase} at ${alert.timeText}. The event is at ${draft.eventTimeText}.${repeatText} Should I save this reminder, adjust it, or drop it?`;
   }
 
-  return `Perfect — ${draft.task}, ${alert.datePhrase}, reminder time ${alert.timeText}. Should I save this reminder, would you like to change something, or does this not work for you?`;
+  const repeatText = draft.repeatRule ? ` ${repeatLabel(draft.repeatRule)}.` : "";
+  return `Perfect — ${draft.task}, ${alert.datePhrase}, reminder time ${alert.timeText}.${repeatText} Should I save this reminder, adjust it, or drop it?`;
 }
 
 function cleanTextForTaskInput(input: string) {
+  if (isAlarmIntentOnly(input)) return "Alarm";
+
   const directTitle = titleFromAsCommand(input);
   if (directTitle) return directTitle;
-  return stripNoiseFromTask(input);
+
+  const reminderCommandTask = extractTaskFromReminderCommand(input);
+  if (reminderCommandTask && !isTimeOnlyTaskCandidate(reminderCommandTask)) return reminderCommandTask;
+
+  const stripped = stripNoiseFromTask(input);
+  return isTimeOnlyTaskCandidate(stripped) ? "" : stripped;
 }
 
 function isQuestionAboutMissing(text: string) {
@@ -823,11 +1275,11 @@ export function isSaveIntent(text: string) {
 }
 
 export function isCancelIntent(text: string) {
-  return /^(no|cancel|cancel this reminder|drop|drop it|not needed|doesn't work|doesnt work|doesn’t work|start over|restart|new reminder|reset)$/i.test(text.trim());
+  return /^(no|cancel|cancel it|cancel that|cancel this|cancel current|cancel draft|cancel the draft|cancel this reminder|drop|drop it|drop this|drop that|drop this reminder|ignore|ignore it|ignore this|ignore that|ignore previous|ignore the previous|ignore previous one|ignore the previous one|ignore last|ignore the last|ignore last one|not needed|doesn't work|doesnt work|doesn’t work|start over|restart|new reminder|reset|clear|clear it|clear this|clear that|clear draft|clear the draft|clear reminder|clear this reminder|forget it|forget this|forget that|forget previous|forget the previous|forget last|discard|discard it|discard this|discard that|discard previous|discard the previous|scrap|scrap it|scrap this|scrap that|scrap this one|scratch it|scratch this|scratch that|delete it|delete this|delete that|delete draft|delete the draft|delete this reminder|remove it|remove this|remove that|remove draft|remove this reminder|erase it|erase this|erase draft|wipe it|wipe this|abandon it|abandon this|abort|abort it|ditch it|ditch this|kill it|kill this|void it|void this|bin it|bin this|trash it|trash this|stop it|stop this|skip it|skip this|not now|not this|not this one|leave it|leave this|leave that|never mind|nevermind)$/i.test(text.trim());
 }
 
 export function isChangeIntent(text: string) {
-  return /^(change|change it|edit|edit it|adjust|adjust it|tweak|modify)$/i.test(text.trim());
+  return /^(change|change it|change something|edit|edit it|adjust|adjust it|adjusted|tweak|modify|modify it)$/i.test(text.trim());
 }
 
 function isAffirmation(text: string) {
@@ -895,6 +1347,15 @@ function applyAMPM(draft: ReminderDraft, input: string): ReminderDraft {
   };
 }
 
+
+function isFreshReminderCommand(text: string) {
+  return /\b(remind me|set(?: a)? reminder|create(?: a)? reminder|reminder|notify me|alert me)\b/i.test(text);
+}
+
+function isResetOrIgnoreIntent(text: string) {
+  return /^(start over|restart|new reminder|reset|clear|clear it|clear this|clear that|clear draft|clear the draft|clear reminder|clear this reminder|cancel|cancel it|cancel that|cancel this|cancel current|cancel draft|cancel the draft|cancel this reminder|drop|drop it|drop this|drop that|drop this reminder|ignore|ignore it|ignore this|ignore that|ignore previous|ignore the previous|ignore previous one|ignore the previous one|ignore last|ignore the last|ignore last one|forget it|forget this|forget that|forget previous|forget the previous|forget last|discard|discard it|discard this|discard that|discard previous|discard the previous|scrap|scrap it|scrap this|scrap that|scrap this one|scratch it|scratch this|scratch that|delete it|delete this|delete that|delete draft|delete the draft|delete this reminder|remove it|remove this|remove that|remove draft|remove this reminder|erase it|erase this|erase draft|wipe it|wipe this|abandon it|abandon this|abort|abort it|ditch it|ditch this|kill it|kill this|void it|void this|bin it|bin this|trash it|trash this|stop it|stop this|skip it|skip this|not now|not this|not this one|leave it|leave this|leave that|never mind|nevermind)$/i.test(text.trim());
+}
+
 export function processUserText(
   currentDraft: ReminderDraft | null,
   userInput: string,
@@ -903,13 +1364,31 @@ export function processUserText(
 ): EngineResult {
   let input = normaliseInput(userInput);
   const now = options?.now || new Date();
+
+  if (isResetOrIgnoreIntent(input)) {
+    return {
+      draft: null,
+      assistantText: "Understood — I’ll ignore the previous reminder. Tell me the next reminder when ready.",
+      readyToSave: false,
+    };
+  }
+
   const correctionMatch = input.match(/^(?:no,?\s*)?(?:i said|actually|correction|correct that to|change that to)\s+(.+)$/i);
   const shouldResetDraftFromCorrection = Boolean(correctionMatch);
   if (correctionMatch) {
     input = normaliseInput(correctionMatch[1]);
   }
-  let draft = !shouldResetDraftFromCorrection && currentDraft ? { ...currentDraft, alerts: [...currentDraft.alerts] } : createEmptyDraft();
-  const contextDraft = shouldResetDraftFromCorrection ? null : currentDraft;
+
+  const shouldResetStalePastDraft = Boolean(
+    currentDraft &&
+      hasPastAlert(currentDraft.alerts) &&
+      isFreshReminderCommand(input)
+  );
+
+  let draft = !shouldResetDraftFromCorrection && !shouldResetStalePastDraft && currentDraft
+    ? { ...currentDraft, alerts: [...currentDraft.alerts] }
+    : createEmptyDraft();
+  const contextDraft = shouldResetDraftFromCorrection || shouldResetStalePastDraft ? null : currentDraft;
   const miniViktorIntent = classifyMiniViktorIntent(input, {
     hasDraft: Boolean(contextDraft),
     hasTask: Boolean(contextDraft?.task?.trim()),
@@ -920,6 +1399,224 @@ export function processUserText(
   });
 
   draft.rawText = [draft.rawText, input].filter(Boolean).join(" | ");
+
+  if (currentDraft && hasPastAlert(currentDraft.alerts) && isRelativeFromNowText(input)) {
+    const refreshed = refreshRelativeDraftDue(draft, now);
+    refreshed.pendingRepeatQuestion = null;
+    return {
+      draft: refreshed,
+      assistantText: responseForDraft(refreshed),
+      readyToSave: missingSlots(refreshed).length === 0 && !hasPastAlert(refreshed.alerts),
+    };
+  }
+
+  const repeatParse = parseRepeatRule(input);
+  if (repeatParse.defaultAlarm) {
+    draft.isAlarm = true;
+    const alarmTask = extractAlarmTaskFromInput(input);
+    const everyTask = extractEveryReminderTask(input);
+    if (alarmTask) {
+      draft.task = alarmTask;
+    } else if (everyTask) {
+      draft.task = everyTask;
+      draft.isAlarm = false;
+    } else if (!draft.task.trim() || isGenericAlarmTask(draft.task)) {
+      draft.task = "Alarm";
+      draft.category = "General";
+    }
+  }
+
+  if (isAlarmIntentOnly(input) && !draft.task.trim() && draft.alerts.length === 0 && !draft.eventTimeText) {
+    draft.task = "Alarm";
+    draft.isAlarm = true;
+    draft.category = "General";
+    return {
+      draft,
+      assistantText: "Sure — when should I set the alarm for?",
+      readyToSave: false,
+    };
+  }
+
+  if (repeatParse.needsKind) {
+    draft.task = draft.task.trim() || "Alarm";
+    draft.isAlarm = true;
+    const startOnly = parseRepeatStartRelative(input, now) || parseRelativeFromNow(input, now);
+    if (startOnly) {
+      const alert = createRelativeAlertFromDue(startOnly.due, false);
+      draft.alerts = [alert];
+      draft.eventDateISO = alert.dateISO;
+      draft.eventDatePhrase = alert.datePhrase;
+      draft.repeatRule = hasTodayOnlyRepeatStop(input)
+        ? withTodayOnlyRepeatStop({ kind: "hourly", intervalMinutes: undefined, label: "Repeats" }, now)
+        : null;
+      draft.pendingRepeatQuestion = "repeat_interval";
+    } else {
+      draft.pendingRepeatQuestion = "repeat_kind";
+    }
+    return {
+      draft,
+      assistantText: responseForDraft(draft),
+      readyToSave: false,
+    };
+  }
+
+  if (repeatParse.rule) {
+    draft.repeatRule = hasTodayOnlyRepeatStop(input) ? withTodayOnlyRepeatStop(repeatParse.rule, now) : repeatParse.rule;
+    const alarmTask = extractAlarmTaskFromInput(input);
+    const everyTask = extractEveryReminderTask(input);
+    if (alarmTask) {
+      draft.task = alarmTask;
+      draft.isAlarm = true;
+    } else if (everyTask) {
+      draft.task = everyTask;
+      draft.isAlarm = false;
+    } else {
+      draft.task = draft.task.trim() || "Alarm";
+      draft.isAlarm = true;
+    }
+
+    const relativeForRepeat = parseRepeatStartRelative(input, now) || parseRelativeFromNow(input, now);
+    if (relativeForRepeat && repeatParse.rule.kind === "hourly" && !repeatParse.needsStart) {
+      const due = relativeForRepeat.due;
+      const alert = createRelativeAlertFromDue(due, false);
+      draft.alerts = [alert];
+      draft.eventDateISO = alert.dateISO;
+      draft.eventDatePhrase = alert.datePhrase;
+    } else {
+      draft = applyRepeatDueFromInput(draft, input, now);
+    }
+
+    if (draft.alerts.length === 0) {
+      draft.pendingRepeatQuestion = repeatParse.needsStart ? "repeat_start" : "repeat_time";
+    } else {
+      draft.pendingRepeatQuestion = null;
+    }
+
+    return {
+      draft,
+      assistantText: responseForDraft(draft),
+      readyToSave: missingSlots(draft).length === 0 && !hasPastAlert(draft.alerts),
+    };
+  }
+
+  if (draft.pendingRepeatQuestion === "repeat_interval") {
+    const followRepeat = parseRepeatRule(input);
+    if (followRepeat.rule) {
+      draft.repeatRule = hasTodayOnlyRepeatStop(input) || hasTodayOnlyRepeatStop(draft.rawText)
+        ? withTodayOnlyRepeatStop(followRepeat.rule, now)
+        : followRepeat.rule;
+      draft.pendingRepeatQuestion = null;
+      return {
+        draft,
+        assistantText: responseForDraft(draft),
+        readyToSave: missingSlots(draft).length === 0 && !hasPastAlert(draft.alerts),
+      };
+    }
+
+    if (hasTodayOnlyRepeatStop(input) || isBareTodayOnlyAnswer(input)) {
+      draft.repeatRule = withTodayOnlyRepeatStop(draft.repeatRule || { kind: "hourly", intervalMinutes: undefined, label: "Repeats" }, now);
+    }
+
+    return {
+      draft,
+      assistantText: responseForDraft(draft),
+      readyToSave: false,
+    };
+  }
+
+  if (draft.pendingRepeatQuestion === "repeat_kind") {
+    // Sprint 3M.4: "today only" is a repeat end-scope, not the repeat gap.
+    // If we already know the first ring time, ask for the gap instead of assuming hourly.
+    if (hasTodayOnlyRepeatStop(input) || isBareTodayOnlyAnswer(input)) {
+      const relativeStart = parseRepeatStartRelative(draft.rawText, now) || parseRelativeFromNow(draft.rawText, now);
+      if (relativeStart) {
+        const alert = createRelativeAlertFromDue(relativeStart.due, false);
+        draft.alerts = [alert];
+        draft.eventDateISO = alert.dateISO;
+        draft.eventDatePhrase = alert.datePhrase;
+        draft.repeatRule = withTodayOnlyRepeatStop(draft.repeatRule || { kind: "hourly", intervalMinutes: undefined, label: "Repeats" }, now);
+        draft.pendingRepeatQuestion = "repeat_interval";
+        return {
+          draft,
+          assistantText: responseForDraft(draft),
+          readyToSave: false,
+        };
+      }
+    }
+    const followRepeat = parseRepeatRule(input);
+    if (followRepeat.rule) {
+      draft.repeatRule = hasTodayOnlyRepeatStop(input) || hasTodayOnlyRepeatStop(draft.rawText) ? withTodayOnlyRepeatStop(followRepeat.rule, now) : followRepeat.rule;
+      draft.isAlarm = true;
+      draft.task = draft.task.trim() || "Alarm";
+      const repeatStart = parseRepeatStartRelative(draft.rawText, now) || parseRepeatStartRelative(input, now);
+      if (repeatStart) {
+        const alert = createRelativeAlertFromDue(repeatStart.due, false);
+        draft.alerts = [alert];
+        draft.eventDateISO = alert.dateISO;
+        draft.eventDatePhrase = alert.datePhrase;
+      } else {
+        draft = applyRepeatDueFromInput(draft, input, now);
+      }
+      draft.pendingRepeatQuestion = draft.alerts.length === 0 ? "repeat_time" : null;
+      return {
+        draft,
+        assistantText: responseForDraft(draft),
+        readyToSave: missingSlots(draft).length === 0 && !hasPastAlert(draft.alerts),
+      };
+    }
+  }
+
+  if (draft.pendingRepeatQuestion === "repeat_start" || draft.pendingRepeatQuestion === "repeat_time") {
+    const relativeStart = parseRelativeFromNow(input, now);
+    if (relativeStart) {
+      const due = relativeStart.due;
+      const alert = createRelativeAlertFromDue(due, false);
+      draft.alerts = [alert];
+      draft.eventDateISO = alert.dateISO;
+      draft.eventDatePhrase = alert.datePhrase;
+      draft.pendingRepeatQuestion = null;
+      return {
+        draft,
+        assistantText: responseForDraft(draft),
+        readyToSave: missingSlots(draft).length === 0 && !hasPastAlert(draft.alerts),
+      };
+    }
+    draft = applyRepeatDueFromInput(draft, input, now);
+    if (draft.alerts.length > 0) draft.pendingRepeatQuestion = null;
+    return {
+      draft,
+      assistantText: responseForDraft(draft),
+      readyToSave: missingSlots(draft).length === 0 && !hasPastAlert(draft.alerts),
+    };
+  }
+
+  const relativeReminder = parseRelativeFromNow(input, now);
+  if (relativeReminder) {
+    const due = relativeReminder.due;
+    const alert = createRelativeAlertFromDue(due, false);
+    draft.alerts = [alert];
+    draft.eventDateISO = alert.dateISO;
+    draft.eventDatePhrase = alert.datePhrase;
+    if (isAlarmCommand(input)) {
+      draft.isAlarm = true;
+      draft.task = extractAlarmTaskFromInput(input) || draft.task.trim() || "Alarm";
+      draft.eventTimeText = (relativeReminder as { seconds?: number }).seconds && (relativeReminder as { seconds?: number }).seconds! < 60
+        ? `${(relativeReminder as { seconds: number }).seconds} seconds from now`
+        : `${relativeReminder.minutes} ${relativeReminder.minutes === 1 ? "minute" : "minutes"} from now`;
+    }
+    if (!draft.task.trim()) {
+      const maybeTask = cleanTextForTaskInput(input);
+      if (maybeTask && !/^(create|set|reminder|a)$/i.test(maybeTask) && !isTimeOnlyTaskCandidate(maybeTask)) {
+        draft.task = maybeTask;
+      }
+    }
+    return {
+      draft,
+      assistantText: responseForDraft(draft),
+      readyToSave: missingSlots(draft).length === 0 && !hasPastAlert(draft.alerts),
+    };
+  }
+
   let expectedAlertCandidateCount = 0;
 
   if (isQuestionAboutMissing(input)) {
@@ -977,6 +1674,9 @@ export function processUserText(
   const directTitle = titleFromAsCommand(input);
   if (directTitle) {
     draft.task = directTitle;
+  } else if (hasWakeUpIntent(input)) {
+    draft.task = "Wake up";
+    draft.isAlarm = true;
   }
 
   const parsedDate = parseDate(input);
@@ -989,28 +1689,35 @@ export function processUserText(
     miniViktorIntent.primaryIntent === "before_event_reminder" ||
     Boolean(currentDraft?.eventTimeText && (/\band\b|\bthen\b|,|&|\breminder\b|\bneed\b/i.test(input)));
 
-  if (!directTitle) {
-    const taskCandidate = cleanTextForTaskInput(input);
+  if (!directTitle && !hasWakeUpIntent(input)) {
+    const everyReminderTask = extractEveryReminderTask(input);
+    const taskCandidate = everyReminderTask || cleanTextForTaskInput(input);
     // MiniViktor must not throw away a clear task just because the same
     // sentence also contains reminder instructions. This is required for
-    // phrases like “Team meeting at 5 pm, remind me half an hour before”.
-    if (taskCandidate && (!contextDraft || !draft.task.trim())) {
+    // phrases like “Team meeting at 5 pm, remind me half an hour before” and
+    // “Every Monday at 8 am remind me for team standup”.
+    if (taskCandidate && (!contextDraft || !draft.task.trim() || /^every$/i.test(draft.task.trim()))) {
       draft.task = taskCandidate;
     }
-  }
-
-  if (parsedDate && (!messageIsAlertInstruction || (draft.eventTimeText && !draft.eventDateISO))) {
-    // If event time is already known and the user says something like
-    // “tomorrow however need a reminder at 4”, that date belongs to the
-    // event as well as the reminder unless explicitly contradicted.
-    draft = applyDate(draft, parsedDate);
   }
 
   const eventToken = explicitEventTime(input, draft);
   const isPureReminderFollowUp = Boolean(contextDraft?.eventTimeText) && messageIsAlertInstruction;
 
+  // Apply the event date even when the same sentence also contains reminder
+  // instructions. Without this, single-turn corpus cases like
+  // “Meeting at 8 pm tomorrow, remind me today at 7 and tomorrow at 6” lose the
+  // event date, and before-event offsets cannot be calculated.
+  if (parsedDate && (!isPureReminderFollowUp || (draft.eventTimeText && !draft.eventDateISO) || Boolean(eventToken))) {
+    draft = applyDate(draft, parsedDate);
+  }
+
   if (eventToken && !isPureReminderFollowUp) {
     draft = applyEventTime(draft, eventToken, input);
+  }
+
+  if (parsedDate && draft.eventTimeText && !draft.eventAt) {
+    draft = updateEventAtIfPossible(draft);
   }
 
   if (draft.pendingAmbiguousTime) {
@@ -1064,6 +1771,12 @@ export function processUserText(
     draft = finaliseDefaultAlertIfPossible(draft);
   }
 
+  const finalEveryReminderTask = extractEveryReminderTask(input);
+  if (finalEveryReminderTask && /^every$/i.test(draft.task.trim())) {
+    draft.task = finalEveryReminderTask;
+    draft.isAlarm = false;
+  }
+
   draft.category = deriveCategory(`${draft.task} ${input}`, learning);
   draft.lastQuestion = missingSlots(draft).length ? null : "confirm";
 
@@ -1089,51 +1802,64 @@ export function processUserText(
 }
 
 export function createRemindersFromDraft(draft: ReminderDraft): SaveResult {
-  if (missingSlots(draft).length > 0 || hasPastAlert(draft.alerts)) {
+  let draftToSave = draft;
+  const saveMoment = new Date();
+
+  // Sprint 3K: relative phrases such as "1 minute from now" must be
+  // anchored to the save/confirmation moment, not the original parse moment.
+  // This avoids false "time already passed" failures when the tester waits
+  // a few seconds before saying "save".
+  if (isRelativeFromNowText(draftToSave.rawText)) {
+    draftToSave = refreshRelativeDraftDue(draftToSave, saveMoment);
+  }
+
+  if (missingSlots(draftToSave).length > 0 || hasPastAlert(draftToSave.alerts)) {
     return {
       reminders: [],
-      assistantText: responseForDraft(draft),
+      assistantText: responseForDraft(draftToSave),
     };
   }
 
-  const now = new Date().toISOString();
-  const reminders: Reminder[] = draft.alerts.map((alert) => ({
+  const now = saveMoment.toISOString();
+  const reminders: Reminder[] = draftToSave.alerts.map((alert) => ({
     id: safeId(),
-    title: draft.task,
-    rawText: draft.rawText,
+    title: draftToSave.task,
+    rawText: draftToSave.rawText,
     dateText: alert.dateLabel,
     datePhrase: alert.datePhrase,
     timeText: alert.timeText,
     dueAt: alert.dueAt,
     status: "confirmed",
-    category: draft.category,
+    category: draftToSave.category,
     createdAt: now,
     notifiedAt: null,
     approximateTime: alert.approximate,
-    eventAt: draft.eventAt,
-    eventDateText: draft.eventAt ? dateLabel(new Date(draft.eventAt)) : undefined,
-    eventTimeText: draft.eventTimeText || undefined,
-    eventPhrase: draft.eventAt ? `${draft.eventDatePhrase} at ${draft.eventTimeText}` : undefined,
-    sourceDraftId: draft.id,
+    eventAt: draftToSave.eventAt,
+    eventDateText: draftToSave.eventAt ? dateLabel(new Date(draftToSave.eventAt)) : undefined,
+    eventTimeText: draftToSave.eventTimeText || undefined,
+    eventPhrase: draftToSave.eventAt ? `${draftToSave.eventDatePhrase} at ${draftToSave.eventTimeText}` : undefined,
+    sourceDraftId: draftToSave.id,
+    repeatRule: draftToSave.repeatRule || null,
+    isAlarm: draftToSave.isAlarm || isGenericAlarmTask(draftToSave.task),
   }));
 
   const first = reminders[0];
   const singleReminderIsEventTime =
     reminders.length === 1 &&
-    Boolean(draft.eventAt) &&
+    Boolean(draftToSave.eventAt) &&
     first.dueAt &&
-    new Date(first.dueAt).getTime() === new Date(draft.eventAt as string).getTime();
+    new Date(first.dueAt).getTime() === new Date(draftToSave.eventAt as string).getTime();
 
   const savedText =
     reminders.length > 1
-      ? `Done — I’ve saved ${reminders.length} reminders for ${draft.task}.`
+      ? `Done — I’ve saved ${reminders.length} reminders for ${draftToSave.task}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}.`
       : singleReminderIsEventTime
-        ? `Done — I’ll remind you about ${draft.task} ${first.datePhrase} at ${first.timeText}. This is the event time you gave me.`
-        : `Done — I’ll remind you about ${draft.task} ${first.datePhrase} at ${first.timeText}.`;
+        ? `Done — I’ll remind you about ${draftToSave.task} ${first.datePhrase} at ${first.timeText}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}. This is the event time you gave me.`
+        : `Done — I’ll remind you about ${draftToSave.task} ${first.datePhrase} at ${first.timeText}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}.`;
 
   const eventText =
-    draft.eventAt && draft.eventTimeText && !singleReminderIsEventTime
-      ? ` The event is at ${draft.eventTimeText}.`
+    draftToSave.eventAt && draftToSave.eventTimeText && !singleReminderIsEventTime
+      ? ` The event is at ${draftToSave.eventTimeText}.`
       : "";
 
   return {
@@ -1175,7 +1901,9 @@ export function visibleReminders(reminders: Reminder[]) {
   const now = Date.now();
   return reminders
     .map((reminder) => {
+      const hasActiveRepeat = Boolean(reminder.repeatRule && reminder.repeatRule.kind !== "none");
       if (
+        !hasActiveRepeat &&
         reminder.status === "confirmed" &&
         reminder.dueAt &&
         new Date(reminder.dueAt).getTime() < now &&

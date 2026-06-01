@@ -1,0 +1,35 @@
+Sprint Alarm-1: Android Native Reminder Alarm
+
+Purpose
+- Schedule Android native local notifications when RemindIQ saves reminders.
+- Use reminder dueAt time, not event time.
+- Keep browser popup/Notification fallback for the PWA.
+
+Required install command before build/sync:
+npm.cmd install @capacitor/local-notifications
+
+Build/sync commands from RemindIQ project folder:
+npm.cmd run build
+npx.cmd cap sync android
+npx.cmd cap open android
+
+Android Studio:
+- Select connected Android phone.
+- Run app.
+- Tap Enable Alarms.
+- Allow notification permission if asked.
+
+Acceptance test:
+1. Create a reminder 2 minutes in the future.
+2. Save it.
+3. Confirm app says Android alarm scheduled.
+4. Lock the phone.
+5. Wait until reminder time.
+6. Android notification should appear with sound/vibration depending on phone settings.
+7. Tap the notification and confirm RemindIQ opens.
+
+Known notes:
+- Exact alarm behaviour depends on Android version and device settings.
+- This build uses Capacitor Local Notifications with allowWhileIdle.
+- If a phone delays alarms due to battery optimisation, disable battery optimisation for RemindIQ during testing.
+- Done/Delete cancels the scheduled native notification where supported.

@@ -1,0 +1,31 @@
+<!--
+RemindIQ 3N.10.1 AndroidManifest patch
+
+Apply inside:
+android/app/src/main/AndroidManifest.xml
+
+1. Add permissions above <application>
+2. Add activity + receiver inside <application>
+-->
+
+<!-- Required permissions -->
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="android.permission.VIBRATE" />
+<uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+<!-- Inside <application> -->
+<activity
+    android:name=".FullScreenAlarmActivity"
+    android:exported="false"
+    android:excludeFromRecents="true"
+    android:launchMode="singleTask"
+    android:showWhenLocked="true"
+    android:turnScreenOn="true"
+    android:theme="@style/AppTheme.NoActionBar" />
+
+<receiver
+    android:name=".AlarmDueReceiver"
+    android:enabled="true"
+    android:exported="false" />

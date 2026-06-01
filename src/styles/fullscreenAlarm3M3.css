@@ -1,0 +1,142 @@
+/* RemindIQ Sprint 3M.3 Full-screen Alarm UI Hotfix
+   Add this file to src/styles and import it once from your app entry or full-screen alarm component:
+   import './styles/fullscreenAlarm3M3.css';
+*/
+
+.riq-alarm-fullscreen,
+.fullscreen-alarm,
+.alarm-fullscreen,
+[data-remindiq-fullscreen-alarm="true"] {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  color: #fff !important;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255, 184, 77, 0.30), transparent 32%),
+    radial-gradient(circle at 85% 18%, rgba(144, 238, 180, 0.20), transparent 34%),
+    linear-gradient(145deg, #07111f 0%, #10243a 48%, #05101c 100%) !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.riq-alarm-card,
+.fullscreen-alarm .alarm-card,
+.alarm-fullscreen .alarm-card,
+[data-remindiq-fullscreen-alarm="true"] .alarm-card {
+  width: min(100%, 520px);
+  min-height: calc(100vh - 36px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.10) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(18px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.riq-alarm-brand,
+.fullscreen-alarm .brand,
+.alarm-fullscreen .brand,
+[data-remindiq-fullscreen-alarm="true"] .brand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.92) !important;
+  font-size: clamp(16px, 3.5vw, 20px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.riq-alarm-title,
+.fullscreen-alarm .alarm-title,
+.alarm-fullscreen .alarm-title,
+[data-remindiq-fullscreen-alarm="true"] .alarm-title {
+  color: #fff !important;
+  font-size: clamp(26px, 8vw, 46px) !important;
+  line-height: 1.08 !important;
+  font-weight: 900 !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  hyphens: auto;
+  max-height: 34vh;
+  overflow: auto;
+  text-align: center;
+  margin: 8px 0;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.42);
+}
+
+.riq-alarm-meta,
+.fullscreen-alarm .alarm-meta,
+.alarm-fullscreen .alarm-meta,
+[data-remindiq-fullscreen-alarm="true"] .alarm-meta {
+  color: rgba(255, 255, 255, 0.88) !important;
+  text-align: center;
+  font-size: clamp(14px, 3.8vw, 18px);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.riq-alarm-controls,
+.fullscreen-alarm .alarm-controls,
+.alarm-fullscreen .alarm-controls,
+[data-remindiq-fullscreen-alarm="true"] .alarm-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.riq-alarm-controls button,
+.fullscreen-alarm .alarm-controls button,
+.alarm-fullscreen .alarm-controls button,
+[data-remindiq-fullscreen-alarm="true"] .alarm-controls button {
+  min-height: 58px;
+  border: 0;
+  border-radius: 20px;
+  font-size: clamp(15px, 4vw, 18px);
+  font-weight: 850;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.25);
+}
+
+.riq-alarm-snooze,
+.fullscreen-alarm .snooze,
+.alarm-fullscreen .snooze,
+[data-remindiq-fullscreen-alarm="true"] .snooze {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.26) !important;
+}
+
+.riq-alarm-done,
+.fullscreen-alarm .done,
+.alarm-fullscreen .done,
+[data-remindiq-fullscreen-alarm="true"] .done {
+  background: linear-gradient(135deg, #f4b24f, #ffd38a) !important;
+  color: #1a1205 !important;
+}
+
+@media (max-width: 380px) {
+  .riq-alarm-card,
+  .fullscreen-alarm .alarm-card,
+  .alarm-fullscreen .alarm-card,
+  [data-remindiq-fullscreen-alarm="true"] .alarm-card {
+    padding: 16px;
+    border-radius: 24px;
+  }
+
+  .riq-alarm-controls,
+  .fullscreen-alarm .alarm-controls,
+  .alarm-fullscreen .alarm-controls,
+  [data-remindiq-fullscreen-alarm="true"] .alarm-controls {
+    grid-template-columns: 1fr;
+  }
+}

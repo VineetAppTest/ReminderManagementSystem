@@ -1,0 +1,24 @@
+Sprint Alarm-2B Fix 1: Native Ringing Foreground Service
+
+Why this fix exists:
+- Android may block direct background Activity launch from BroadcastReceiver.
+- The previous receiver attempted to open AlarmActivity directly, so the ringing screen could fail to appear.
+- This fix starts a foreground ringing service from the alarm receiver.
+
+What changed:
+1. Added RemindIqRingingService.java.
+2. AlarmReceiver now starts the foreground ringing service.
+3. The foreground service plays looping alarm audio and vibration.
+4. The service posts a high-priority full-screen alarm notification.
+5. AlarmActivity now controls the service with Stop/Done and Snooze 10 min.
+6. Manifest includes foreground service permissions.
+
+Testing:
+- Uninstall old RemindIQ before installing.
+- Create a reminder 2 minutes from now.
+- Lock the phone.
+- Expected: alarm sound/vibration + alarm notification/full-screen screen.
+
+If full-screen screen still does not open while phone is unlocked:
+- Android may show a high-priority heads-up notification instead.
+- Lock-screen full-screen behaviour is the more important test.
