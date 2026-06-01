@@ -414,6 +414,9 @@ function extractAlarmTaskFromInput(input: string) {
   const text = normaliseInput(input).trim();
   if (hasWakeUpIntent(text)) return "Wake up";
 
+  const explicitTitle = extractExplicitTitleFromInput(text);
+  if (explicitTitle) return explicitTitle;
+
   const dailyFor = text.match(/\b(?:set|create|start|make)?\s*(?:a\s+)?(?:daily|weekly|repeating|repetitive|recurring)?\s*alarm\s+for\s+(.+?)\s+at\s+\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(?:am|pm|a\.m\.|p\.m\.)?\b/i);
   if (dailyFor) {
     const task = stripNoiseFromTask(dailyFor[1]);
@@ -815,10 +818,46 @@ function stripNoiseFromTask(input: string) {
   return task;
 }
 
+
+function cleanExplicitTitleCandidate(value: string) {
+  return (stripNoiseFromTask(value) || value)
+    .replace(/^(?:as|to|is|of|called|named|titled|heading|headed|labelled|labeled|captioned)\s+/i, "")
+    .replace(/\b(?:for|on)\s+(?:today|tomorrow|day after tomorrow)$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractExplicitTitleFromInput(input: string) {
+  const text = normaliseInput(input).trim();
+
+  // Sprint 3N.13.1: handle explicit title/heading synonyms in full reminder/alarm commands.
+  // Examples:
+  // - "set an alarm for 6 am with title flight to Bombay"
+  // - "set an alarm for 6 am with heading flight to Bombay"
+  // - "set an alarm at 6 called flight to Bombay"
+  // - "remind me tomorrow 8 with subject passport renewal"
+  const patterns = [
+    /\b(?:with|using|under)\s+(?:the\s+)?(?:title|heading|headings|subject|name|label|caption|description|topic)\s*(?:as|is|of|to|:|-)?\s+(.+)$/i,
+    /\b(?:whose\s+)?(?:title|heading|subject|name|label|caption|description|topic)\s*(?:is|as|to|:|-)\s+(.+)$/i,
+    /\b(?:named|called|titled|headed|labelled|labeled|captioned)\s+(.+)$/i,
+    /\b(?:save it as|call it|make it|name it|rename it|title it|heading it|label it|caption it)\s+(.+)$/i,
+    /\b(?:name|rename|title|heading|label|caption)(?:\s+the)?(?:\s+(?:alarm|reminder))?\s+(?:as|to)\s+(.+)$/i,
+    /\b(?:call)(?:\s+the)?(?:\s+(?:alarm|reminder))?\s+(?:as|to)\s+(.+)$/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      const candidate = cleanExplicitTitleCandidate(match[1]);
+      if (candidate && !isTimeOnlyTaskCandidate(candidate)) return candidate;
+    }
+  }
+
+  return null;
+}
+
 function titleFromAsCommand(input: string) {
-  const match = input.match(/\b(?:save it as|call it|make it|name it|rename it|title it|name(?:\s+the)?(?:\s+(?:alarm|reminder))?\s+as|call(?:\s+the)?(?:\s+(?:alarm|reminder))?\s+as)\s+(.+)$/i);
-  if (!match) return null;
-  return stripNoiseFromTask(match[1]) || match[1].trim();
+  return extractExplicitTitleFromInput(input);
 }
 
 function extractReminderSegment(input: string): string | null {
@@ -1208,6 +1247,11 @@ function responseForDraft(draft: ReminderDraft): string {
     const alertText = draft.alerts.length
       ? draft.alerts.map((alert) => `${alert.datePhrase} at ${alert.timeText}`).join(" and ")
       : "";
+    if (draft.isAlarm) {
+      return alertText
+        ? `I have the alarm alert${draft.alerts.length > 1 ? "s" : ""} as ${alertText}. Which day should I set the alarm "${draft.task}" for at ${draft.eventTimeText}?`
+        : `Which day should I set the alarm "${draft.task}" for at ${draft.eventTimeText}?`;
+    }
     return alertText
       ? `I have the reminder alert${draft.alerts.length > 1 ? "s" : ""} as ${alertText}. Which day is ${draft.task} itself at ${draft.eventTimeText}?`
       : `Which day is ${draft.task} at ${draft.eventTimeText}?`;
@@ -1241,6 +1285,9 @@ function responseForDraft(draft: ReminderDraft): string {
 
   if (draft.eventAt && eventAndReminderSame) {
     const repeatText = draft.repeatRule ? ` ${repeatLabel(draft.repeatRule)}.` : "";
+    if (draft.isAlarm) {
+      return `Alarm "${draft.task}" is set for ${eventText}.${repeatText} Should I save this alarm, adjust it, or drop it?`;
+    }
     return `${draft.task} is ${eventText}. I’ll remind you at the event time unless you want an earlier reminder.${repeatText} Should I save this reminder, adjust it, or drop it?`;
   }
 
@@ -1250,6 +1297,9 @@ function responseForDraft(draft: ReminderDraft): string {
   }
 
   const repeatText = draft.repeatRule ? ` ${repeatLabel(draft.repeatRule)}.` : "";
+  if (draft.isAlarm) {
+    return `Perfect — alarm "${draft.task}" is set for ${alert.datePhrase} at ${alert.timeText}.${repeatText} Should I save this alarm, adjust it, or drop it?`;
+  }
   return `Perfect — ${draft.task}, ${alert.datePhrase}, reminder time ${alert.timeText}.${repeatText} Should I save this reminder, adjust it, or drop it?`;
 }
 
@@ -1672,6 +1722,9 @@ export function processUserText(
   }
 
   const directTitle = titleFromAsCommand(input);
+  if (isAlarmCommand(input)) {
+    draft.isAlarm = true;
+  }
   if (directTitle) {
     draft.task = directTitle;
   } else if (hasWakeUpIntent(input)) {
@@ -1851,11 +1904,13 @@ export function createRemindersFromDraft(draft: ReminderDraft): SaveResult {
     new Date(first.dueAt).getTime() === new Date(draftToSave.eventAt as string).getTime();
 
   const savedText =
-    reminders.length > 1
-      ? `Done — I’ve saved ${reminders.length} reminders for ${draftToSave.task}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}.`
-      : singleReminderIsEventTime
-        ? `Done — I’ll remind you about ${draftToSave.task} ${first.datePhrase} at ${first.timeText}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}. This is the event time you gave me.`
-        : `Done — I’ll remind you about ${draftToSave.task} ${first.datePhrase} at ${first.timeText}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}.`;
+    draftToSave.isAlarm && reminders.length === 1
+      ? `Done — I’ll ring the alarm for ${draftToSave.task} ${first.datePhrase} at ${first.timeText}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}.`
+      : reminders.length > 1
+        ? `Done — I’ve saved ${reminders.length} reminders for ${draftToSave.task}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}.`
+        : singleReminderIsEventTime
+          ? `Done — I’ll remind you about ${draftToSave.task} ${first.datePhrase} at ${first.timeText}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}. This is the event time you gave me.`
+          : `Done — I’ll remind you about ${draftToSave.task} ${first.datePhrase} at ${first.timeText}${draftToSave.repeatRule ? ` (${repeatLabel(draftToSave.repeatRule)})` : ""}.`;
 
   const eventText =
     draftToSave.eventAt && draftToSave.eventTimeText && !singleReminderIsEventTime
@@ -1929,5 +1984,8 @@ export function getTestBank() {
     "Doctor appointment next Tuesday morning",
     "Pay electricity bill Friday evening",
     "tomorro → tomorrow",
+    "Set an alarm for 6:00 am with title flight to Bombay → today",
+    "Set an alarm for 6:00 am with heading flight to Bombay → today",
+    "Set an alarm at 6 am called flight to Bombay → today",
   ];
 }

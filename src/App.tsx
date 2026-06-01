@@ -2384,7 +2384,7 @@ function App() {
                 <span>Configuration: {feedbackConfigLabel}</span>
                 <p>{feedbackSyncMessage}</p>
                 <small>Pending local items: {unsyncedFeedbackCount}</small>
-                <small>Firebase needs VITE_FEEDBACK_PROVIDER=firebase, VITE_FIREBASE_PROJECT_ID, and VITE_FIREBASE_API_KEY in .env.</small>
+                <small>Webhook mode uses VITE_FEEDBACK_PROVIDER=webhook and VITE_FEEDBACK_WEBHOOK_URL in .env.</small>
               </div>
 
               <div className="beta-footer">
@@ -2603,4 +2603,5 @@ function App() {
 }
 
 export default App;
+
 

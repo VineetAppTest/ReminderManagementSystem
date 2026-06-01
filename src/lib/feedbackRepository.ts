@@ -1,253 +1,184 @@
-export type FeedbackRepositoryProvider = "supabase" | "firebase" | "sheets";
+export type FeedbackRepositoryProvider =
+  | "firebase"
+  | "supabase"
+  | "google_sheets"
+  | "google_form"
+  | "webhook";
 
-export type SupabaseFeedbackConfig = {
-  provider: "supabase";
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  tableName: string;
+export type RemoteFeedbackConfig = {
+  provider: FeedbackRepositoryProvider;
+  endpoint?: string;
+  googleForm?: {
+    submitUrl: string;
+    entries: {
+      testerId: string;
+      issueType: string;
+      comment: string;
+      conversation: string;
+      draft: string;
+      reminders: string;
+      appVersion: string;
+      buildLabel: string;
+      platform: string;
+      userAgent: string;
+      createdAt: string;
+    };
+  };
 };
 
-export type FirebaseFeedbackConfig = {
-  provider: "firebase";
-  firebaseProjectId: string;
-  firebaseApiKey: string;
-  firebaseCollection: string;
-};
-
-export type SheetsFeedbackConfig = {
-  provider: "sheets";
-  sheetsWebhookUrl: string;
-};
-
-export type RemoteFeedbackConfig = SupabaseFeedbackConfig | FirebaseFeedbackConfig | SheetsFeedbackConfig;
-
-export type FeedbackRepositoryResult = {
+export type FeedbackPushResult = {
   ok: boolean;
   error?: string;
 };
 
-function normalizeUrl(value: string) {
-  return value.trim().replace(/\/$/, "");
+function env(name: string): string {
+  const value = (import.meta as any)?.env?.[name];
+  return typeof value === "string" ? value.trim() : "";
 }
 
-function envString(name: string) {
-  return String(import.meta.env[name] || "").trim();
-}
-
-function normalizeProvider(value: string): FeedbackRepositoryProvider | null {
+function normalizeProvider(value: string): FeedbackRepositoryProvider | "" {
   const provider = value.trim().toLowerCase();
-  if (provider === "supabase" || provider === "firebase" || provider === "sheets") return provider;
-  return null;
+  if (provider === "google_forms" || provider === "googleform" || provider === "forms") return "google_form";
+  if (provider === "google_form") return "google_form";
+  if (provider === "google_sheets") return "google_sheets";
+  if (provider === "webhook") return "webhook";
+  if (provider === "firebase") return "firebase";
+  if (provider === "supabase") return "supabase";
+  return "";
+}
+
+function stringifyForForm(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function firstNonEmpty(...values: string[]): string {
+  return values.find((value) => value && value.trim())?.trim() || "";
 }
 
 export function getRemoteFeedbackConfig(): RemoteFeedbackConfig | null {
-  const explicitProvider = normalizeProvider(envString("VITE_FEEDBACK_PROVIDER"));
+  const provider = normalizeProvider(env("VITE_FEEDBACK_PROVIDER"));
+  if (!provider) return null;
 
-  const firebaseProjectId = envString("VITE_FIREBASE_PROJECT_ID");
-  const firebaseApiKey = envString("VITE_FIREBASE_API_KEY");
-  const firebaseCollection = envString("VITE_FIREBASE_FEEDBACK_COLLECTION") || "remindiq_feedback_items";
+  if (provider === "google_form") {
+    const submitUrl = firstNonEmpty(
+      env("VITE_GOOGLE_FORM_SUBMIT_URL"),
+      env("VITE_FEEDBACK_GOOGLE_FORM_SUBMIT_URL")
+    );
 
-  const supabaseUrl = normalizeUrl(envString("VITE_SUPABASE_URL"));
-  const supabaseAnonKey = envString("VITE_SUPABASE_ANON_KEY");
-  const tableName = envString("VITE_FEEDBACK_TABLE") || "remindiq_feedback_items";
-
-  const sheetsWebhookUrl = normalizeUrl(envString("VITE_SHEETS_FEEDBACK_WEBHOOK_URL"));
-
-  const inferredProvider: FeedbackRepositoryProvider | null = explicitProvider
-    || (firebaseProjectId && firebaseApiKey ? "firebase" : null)
-    || (supabaseUrl && supabaseAnonKey ? "supabase" : null)
-    || (sheetsWebhookUrl ? "sheets" : null);
-
-  if (inferredProvider === "firebase") {
-    if (!firebaseProjectId || !firebaseApiKey || !firebaseCollection) return null;
-    return {
-      provider: "firebase",
-      firebaseProjectId,
-      firebaseApiKey,
-      firebaseCollection,
+    const entries = {
+      testerId: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_TESTER_ID"), env("VITE_FEEDBACK_ENTRY_TESTER_ID")),
+      issueType: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_ISSUE_TYPE"), env("VITE_FEEDBACK_ENTRY_ISSUE_TYPE")),
+      comment: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_COMMENT"), env("VITE_FEEDBACK_ENTRY_COMMENT")),
+      conversation: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_CONVERSATION"), env("VITE_FEEDBACK_ENTRY_CONVERSATION")),
+      draft: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_DRAFT"), env("VITE_FEEDBACK_ENTRY_DRAFT")),
+      reminders: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_REMINDERS"), env("VITE_FEEDBACK_ENTRY_REMINDERS")),
+      appVersion: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_APP_VERSION"), env("VITE_FEEDBACK_ENTRY_APP_VERSION")),
+      buildLabel: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_BUILD_LABEL"), env("VITE_FEEDBACK_ENTRY_BUILD_LABEL")),
+      platform: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_PLATFORM"), env("VITE_FEEDBACK_ENTRY_PLATFORM")),
+      userAgent: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_USER_AGENT"), env("VITE_FEEDBACK_ENTRY_USER_AGENT")),
+      createdAt: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_CREATED_AT"), env("VITE_FEEDBACK_ENTRY_CREATED_AT")),
     };
+
+    const missing = Object.entries(entries).filter(([, value]) => !value).map(([key]) => key);
+    if (!submitUrl || missing.length > 0) {
+      console.warn("[RemindIQ feedback] Google Form feedback repository is incomplete.", {
+        submitUrlPresent: Boolean(submitUrl),
+        missing,
+      });
+      return null;
+    }
+
+    return { provider, googleForm: { submitUrl, entries } };
   }
 
-  if (inferredProvider === "supabase") {
-    if (!supabaseUrl || !supabaseAnonKey || !tableName) return null;
-    return {
-      provider: "supabase",
-      supabaseUrl,
-      supabaseAnonKey,
-      tableName,
-    };
+  if (provider === "webhook" || provider === "google_sheets") {
+    const endpoint = firstNonEmpty(env("VITE_FEEDBACK_WEBHOOK_URL"), env("VITE_GOOGLE_SHEETS_WEBHOOK_URL"));
+    if (!endpoint) return null;
+    return { provider, endpoint };
   }
 
-  if (inferredProvider === "sheets") {
-    if (!sheetsWebhookUrl) return null;
-    return {
-      provider: "sheets",
-      sheetsWebhookUrl,
-    };
-  }
-
-  return null;
+  return { provider };
 }
 
-export async function pushFeedbackToRepository(
-  config: RemoteFeedbackConfig,
-  payload: Record<string, unknown>,
-): Promise<FeedbackRepositoryResult> {
-  if (config.provider === "firebase") return pushFeedbackToFirebase(config, payload);
-  if (config.provider === "sheets") return pushFeedbackToSheets(config, payload);
-  return pushFeedbackToSupabase(config, payload);
-}
+async function pushToGoogleForm(config: RemoteFeedbackConfig, payload: any): Promise<FeedbackPushResult> {
+  if (!config.googleForm) return { ok: false, error: "Google Form config missing." };
 
-async function pushFeedbackToSupabase(
-  config: SupabaseFeedbackConfig,
-  payload: Record<string, unknown>,
-): Promise<FeedbackRepositoryResult> {
+  const { submitUrl, entries } = config.googleForm;
+  const body = new URLSearchParams();
+
+  body.append(`entry.${entries.testerId}`, stringifyForForm(payload.tester_id));
+  body.append(`entry.${entries.issueType}`, stringifyForForm(payload.issue_type));
+  body.append(`entry.${entries.comment}`, stringifyForForm(payload.comment));
+  body.append(`entry.${entries.conversation}`, stringifyForForm(payload.conversation));
+  body.append(`entry.${entries.draft}`, stringifyForForm(payload.active_draft));
+  body.append(`entry.${entries.reminders}`, stringifyForForm(payload.visible_reminders_snapshot));
+  body.append(`entry.${entries.appVersion}`, stringifyForForm(payload.app_version));
+  body.append(`entry.${entries.buildLabel}`, stringifyForForm(payload.build_label));
+  body.append(`entry.${entries.platform}`, stringifyForForm(payload.platform));
+  body.append(`entry.${entries.userAgent}`, stringifyForForm(payload.user_agent));
+  body.append(`entry.${entries.createdAt}`, stringifyForForm(payload.created_at));
+
   try {
-    const response = await fetch(`${config.supabaseUrl}/rest/v1/${config.tableName}`, {
+    await fetch(submitUrl, {
       method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    return { ok: true };
+  } catch (error: any) {
+    return { ok: false, error: error?.message || "Google Form submission failed." };
+  }
+}
+
+async function pushToWebhook(config: RemoteFeedbackConfig, payload: any): Promise<FeedbackPushResult> {
+  if (!config.endpoint) {
+    return { ok: false, error: "Webhook endpoint missing." };
+  }
+
+  try {
+    /*
+     * RemindIQ 3N.13.3
+     * Google Apps Script web apps often do not return a CORS-readable response
+     * to Android WebView. Use no-cors + text/plain to avoid preflight and treat
+     * dispatch as success. The Google Sheet row is the source of truth.
+     */
+    await fetch(config.endpoint, {
+      method: "POST",
+      mode: "no-cors",
       headers: {
-        "Content-Type": "application/json",
-        apikey: config.supabaseAnonKey,
-        Authorization: `Bearer ${config.supabaseAnonKey}`,
-        Prefer: "return=minimal",
+        "Content-Type": "text/plain;charset=utf-8",
       },
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      return {
-        ok: false,
-        error: text || `HTTP ${response.status}`,
-      };
-    }
-
     return { ok: true };
-  } catch (error) {
+  } catch (error: any) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Network error",
+      error: error?.message || "Webhook submission failed.",
     };
   }
 }
 
-async function pushFeedbackToFirebase(
-  config: FirebaseFeedbackConfig,
-  payload: Record<string, unknown>,
-): Promise<FeedbackRepositoryResult> {
-  try {
-    const documentPayload = {
-      fields: toFirestoreFields({
-        ...payload,
-        repository_provider: "firebase",
-        repository_received_at: new Date().toISOString(),
-      }),
-    };
+export async function pushFeedbackToRepository(
+  config: RemoteFeedbackConfig | null,
+  payload: any
+): Promise<FeedbackPushResult> {
+  if (!config) return { ok: false, error: "Feedback repository is not configured." };
 
-    const response = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(config.firebaseProjectId)}/databases/(default)/documents/${encodeURIComponent(config.firebaseCollection)}?key=${encodeURIComponent(config.firebaseApiKey)}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(documentPayload),
-      },
-    );
+  if (config.provider === "google_form") return pushToGoogleForm(config, payload);
+  if (config.provider === "webhook" || config.provider === "google_sheets") return pushToWebhook(config, payload);
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      return {
-        ok: false,
-        error: text || `HTTP ${response.status}`,
-      };
-    }
-
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Network error",
-    };
-  }
+  return {
+    ok: false,
+    error: `${config.provider} provider is not active in 3N.13.2. Use VITE_FEEDBACK_PROVIDER=google_form for no-billing UAT feedback.`,
+  };
 }
 
-async function pushFeedbackToSheets(
-  config: SheetsFeedbackConfig,
-  payload: Record<string, unknown>,
-): Promise<FeedbackRepositoryResult> {
-  try {
-    const response = await fetch(config.sheetsWebhookUrl, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        ...payload,
-        repository_provider: "sheets",
-        repository_received_at: new Date().toISOString(),
-      }),
-    });
-
-    // Apps Script web apps commonly require no-cors from browser clients; that
-    // returns an opaque response even when the write succeeds. Treat the request
-    // dispatch as success and keep local export as fallback.
-    if (response.type === "opaque") return { ok: true };
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      return {
-        ok: false,
-        error: text || `HTTP ${response.status}`,
-      };
-    }
-
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Network error",
-    };
-  }
-}
-
-type FirestoreValue =
-  | { stringValue: string }
-  | { booleanValue: boolean }
-  | { integerValue: string }
-  | { doubleValue: number }
-  | { timestampValue: string }
-  | { nullValue: null }
-  | { mapValue: { fields: Record<string, FirestoreValue> } }
-  | { arrayValue: { values: FirestoreValue[] } };
-
-function toFirestoreFields(value: Record<string, unknown>): Record<string, FirestoreValue> {
-  return Object.fromEntries(
-    Object.entries(value).map(([key, fieldValue]) => [key, toFirestoreValue(fieldValue)]),
-  );
-}
-
-function toFirestoreValue(value: unknown): FirestoreValue {
-  if (value === null || value === undefined) return { nullValue: null };
-
-  if (typeof value === "string") {
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) && !Number.isNaN(Date.parse(value))) {
-      return { timestampValue: new Date(value).toISOString() };
-    }
-    return { stringValue: value };
-  }
-
-  if (typeof value === "boolean") return { booleanValue: value };
-
-  if (typeof value === "number") {
-    if (Number.isInteger(value)) return { integerValue: String(value) };
-    return { doubleValue: value };
-  }
-
-  if (Array.isArray(value)) {
-    return { arrayValue: { values: value.map(toFirestoreValue) } };
-  }
-
-  if (typeof value === "object") {
-    return { mapValue: { fields: toFirestoreFields(value as Record<string, unknown>) } };
-  }
-
-  return { stringValue: String(value) };
-}
