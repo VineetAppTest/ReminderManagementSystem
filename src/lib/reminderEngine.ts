@@ -796,6 +796,7 @@ function stripNoiseFromTask(input: string) {
   let task = input;
 
   task = task
+    .replace(/\b(?:set|create|start|make)\s+(?:an?\s+)?alarm\b/gi, "")
     .replace(/\b(remind me|set(?: a)? reminder|create(?: a)? reminder|reminder|need(?: a)? reminder|notify me|alert me)\b.*$/i, "")
     .replace(/\bbut need\b.*$/i, "")
     .replace(/\bhowever need\b.*$/i, "")
@@ -810,6 +811,7 @@ function stripNoiseFromTask(input: string) {
     .replace(/\bhalf an hour before\b|\bhalf hour before\b|\ban hour before\b|\bone hour before\b|\bquarter of an hour before\b/gi, "")
     .replace(/[.,;:]+$/g, "")
     .replace(/\s+[.,;:]+/g, "")
+    .replace(/\b(?:for|to|about|with|title|heading|subject|name|label|caption)\s*$/i, "")
     .replace(/[ ,]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -1124,6 +1126,8 @@ function isTimeOnlyTaskCandidate(task: string) {
   if (/^(in|after|for)?\s*\d{1,3}\s*(seconds?|secs?|sec|minutes?|mins?|min|hours?|hrs?|hr)\s*(from now|later)?$/.test(lower)) return true;
   if (/^\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(am|pm|a\.m\.|p\.m\.)?$/.test(lower)) return true;
   if (/^(at\s+)?\d{1,2}(?:(?:\:|\.)\d{1,2})?\s*(am|pm|a\.m\.|p\.m\.)?\s*(today|tomorrow)?$/.test(lower)) return true;
+  if (/^(set|create|start|make)\s+(an?\s+)?alarm\s*(for|at)?$/.test(lower)) return true;
+  if (/^(set|create)\s+(a\s+)?reminder\s*(for|to|about)?$/.test(lower)) return true;
   return false;
 }
 
@@ -1399,7 +1403,26 @@ function applyAMPM(draft: ReminderDraft, input: string): ReminderDraft {
 
 
 function isFreshReminderCommand(text: string) {
-  return /\b(remind me|set(?: a)? reminder|create(?: a)? reminder|reminder|notify me|alert me)\b/i.test(text);
+  return /\b(remind me|set(?: a)? reminder|create(?: a)? reminder|reminder|notify me|alert me|set\s+(?:an?\s+)?alarm|create\s+(?:an?\s+)?alarm|start\s+(?:an?\s+)?alarm|make\s+(?:an?\s+)?alarm|wake\s+me\s+up)\b/i.test(text);
+}
+
+function isFreshFullReminderOrAlarmCommand(text: string) {
+  const normalized = normaliseInput(text).trim();
+  if (!isFreshReminderCommand(normalized)) return false;
+  return Boolean(
+    parseRelativeFromNow(normalized, new Date()) ||
+      extractTimeTokens(normalized).length > 0 ||
+      parseDate(normalized) ||
+      extractExplicitTitleFromInput(normalized)
+  );
+}
+
+function isSimpleReminderAlertCommand(text: string) {
+  const normalized = normaliseInput(text).trim();
+  if (isAlarmCommand(normalized)) return false;
+  if (!/\b(remind me|set(?: a)? reminder|create(?: a)? reminder|notify me|alert me)\b/i.test(normalized)) return false;
+  if (/\bas\b.*\bis at\b/i.test(normalized)) return false;
+  return extractTimeTokens(normalized).length > 0 || Boolean(parseRelativeFromNow(normalized, new Date()));
 }
 
 function isResetOrIgnoreIntent(text: string) {
@@ -1435,10 +1458,20 @@ export function processUserText(
       isFreshReminderCommand(input)
   );
 
-  let draft = !shouldResetDraftFromCorrection && !shouldResetStalePastDraft && currentDraft
+  // Sprint 3N.13.4: if the user gives a full new reminder/alarm phrase while an
+  // earlier draft is incomplete or wrong, replace the draft instead of merging
+  // old task/time with the new phrase. This fixes flows like:
+  // "set a reminder for me to take part at" -> "set a reminder for me to take bath at 4 pm today".
+  const shouldResetDraftFromFreshFullCommand = Boolean(
+    currentDraft &&
+      isFreshFullReminderOrAlarmCommand(input) &&
+      (missingSlots(currentDraft).length > 0 || !currentDraft.lastQuestion || hasPastAlert(currentDraft.alerts))
+  );
+
+  let draft = !shouldResetDraftFromCorrection && !shouldResetStalePastDraft && !shouldResetDraftFromFreshFullCommand && currentDraft
     ? { ...currentDraft, alerts: [...currentDraft.alerts] }
     : createEmptyDraft();
-  const contextDraft = shouldResetDraftFromCorrection || shouldResetStalePastDraft ? null : currentDraft;
+  const contextDraft = shouldResetDraftFromCorrection || shouldResetStalePastDraft || shouldResetDraftFromFreshFullCommand ? null : currentDraft;
   const miniViktorIntent = classifyMiniViktorIntent(input, {
     hasDraft: Boolean(contextDraft),
     hasTask: Boolean(contextDraft?.task?.trim()),
@@ -1649,7 +1682,8 @@ export function processUserText(
     draft.eventDatePhrase = alert.datePhrase;
     if (isAlarmCommand(input)) {
       draft.isAlarm = true;
-      draft.task = extractAlarmTaskFromInput(input) || draft.task.trim() || "Alarm";
+      const alarmTask = extractAlarmTaskFromInput(input);
+      draft.task = alarmTask && !isTimeOnlyTaskCandidate(alarmTask) ? alarmTask : draft.task.trim() || "Alarm";
       draft.eventTimeText = (relativeReminder as { seconds?: number }).seconds && (relativeReminder as { seconds?: number }).seconds! < 60
         ? `${(relativeReminder as { seconds: number }).seconds} seconds from now`
         : `${relativeReminder.minutes} ${relativeReminder.minutes === 1 ? "minute" : "minutes"} from now`;
@@ -1754,7 +1788,14 @@ export function processUserText(
     }
   }
 
-  const eventToken = explicitEventTime(input, draft);
+  // Sprint 3N.13.4: bare alarm commands with only a time should not produce
+  // titles such as "set an alarm for". Default to Alarm until user names it.
+  if (draft.isAlarm && (!draft.task.trim() || isTimeOnlyTaskCandidate(draft.task) || /^(set|create|start|make)\s+(an?\s+)?alarm/i.test(draft.task))) {
+    draft.task = "Alarm";
+    draft.category = "General";
+  }
+
+  const eventToken = isSimpleReminderAlertCommand(input) ? null : explicitEventTime(input, draft);
   const isPureReminderFollowUp = Boolean(contextDraft?.eventTimeText) && messageIsAlertInstruction;
 
   // Apply the event date even when the same sentence also contains reminder
@@ -1987,5 +2028,9 @@ export function getTestBank() {
     "Set an alarm for 6:00 am with title flight to Bombay → today",
     "Set an alarm for 6:00 am with heading flight to Bombay → today",
     "Set an alarm at 6 am called flight to Bombay → today",
+    "remind me to have water at 7 p.m.",
+    "set an alarm for 6:52 p.m.",
+    "set an alarm for 6:40 p.m. and the title is to drink water",
+    "set a reminder for me to take part at → set a reminder for me to take bath at 4 p.m. today",
   ];
 }
