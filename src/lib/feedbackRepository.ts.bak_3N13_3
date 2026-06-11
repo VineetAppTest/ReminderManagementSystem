@@ -1,0 +1,168 @@
+export type FeedbackRepositoryProvider =
+  | "firebase"
+  | "supabase"
+  | "google_sheets"
+  | "google_form"
+  | "webhook";
+
+export type RemoteFeedbackConfig = {
+  provider: FeedbackRepositoryProvider;
+  endpoint?: string;
+  googleForm?: {
+    submitUrl: string;
+    entries: {
+      testerId: string;
+      issueType: string;
+      comment: string;
+      conversation: string;
+      draft: string;
+      reminders: string;
+      appVersion: string;
+      buildLabel: string;
+      platform: string;
+      userAgent: string;
+      createdAt: string;
+    };
+  };
+};
+
+export type FeedbackPushResult = {
+  ok: boolean;
+  error?: string;
+};
+
+function env(name: string): string {
+  const value = (import.meta as any)?.env?.[name];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeProvider(value: string): FeedbackRepositoryProvider | "" {
+  const provider = value.trim().toLowerCase();
+  if (provider === "google_forms" || provider === "googleform" || provider === "forms") return "google_form";
+  if (provider === "google_form") return "google_form";
+  if (provider === "google_sheets") return "google_sheets";
+  if (provider === "webhook") return "webhook";
+  if (provider === "firebase") return "firebase";
+  if (provider === "supabase") return "supabase";
+  return "";
+}
+
+function stringifyForForm(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function firstNonEmpty(...values: string[]): string {
+  return values.find((value) => value && value.trim())?.trim() || "";
+}
+
+export function getRemoteFeedbackConfig(): RemoteFeedbackConfig | null {
+  const provider = normalizeProvider(env("VITE_FEEDBACK_PROVIDER"));
+  if (!provider) return null;
+
+  if (provider === "google_form") {
+    const submitUrl = firstNonEmpty(
+      env("VITE_GOOGLE_FORM_SUBMIT_URL"),
+      env("VITE_FEEDBACK_GOOGLE_FORM_SUBMIT_URL")
+    );
+
+    const entries = {
+      testerId: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_TESTER_ID"), env("VITE_FEEDBACK_ENTRY_TESTER_ID")),
+      issueType: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_ISSUE_TYPE"), env("VITE_FEEDBACK_ENTRY_ISSUE_TYPE")),
+      comment: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_COMMENT"), env("VITE_FEEDBACK_ENTRY_COMMENT")),
+      conversation: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_CONVERSATION"), env("VITE_FEEDBACK_ENTRY_CONVERSATION")),
+      draft: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_DRAFT"), env("VITE_FEEDBACK_ENTRY_DRAFT")),
+      reminders: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_REMINDERS"), env("VITE_FEEDBACK_ENTRY_REMINDERS")),
+      appVersion: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_APP_VERSION"), env("VITE_FEEDBACK_ENTRY_APP_VERSION")),
+      buildLabel: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_BUILD_LABEL"), env("VITE_FEEDBACK_ENTRY_BUILD_LABEL")),
+      platform: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_PLATFORM"), env("VITE_FEEDBACK_ENTRY_PLATFORM")),
+      userAgent: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_USER_AGENT"), env("VITE_FEEDBACK_ENTRY_USER_AGENT")),
+      createdAt: firstNonEmpty(env("VITE_GOOGLE_FORM_ENTRY_CREATED_AT"), env("VITE_FEEDBACK_ENTRY_CREATED_AT")),
+    };
+
+    const missing = Object.entries(entries).filter(([, value]) => !value).map(([key]) => key);
+    if (!submitUrl || missing.length > 0) {
+      console.warn("[RemindIQ feedback] Google Form feedback repository is incomplete.", {
+        submitUrlPresent: Boolean(submitUrl),
+        missing,
+      });
+      return null;
+    }
+
+    return { provider, googleForm: { submitUrl, entries } };
+  }
+
+  if (provider === "webhook" || provider === "google_sheets") {
+    const endpoint = firstNonEmpty(env("VITE_FEEDBACK_WEBHOOK_URL"), env("VITE_GOOGLE_SHEETS_WEBHOOK_URL"));
+    if (!endpoint) return null;
+    return { provider, endpoint };
+  }
+
+  return { provider };
+}
+
+async function pushToGoogleForm(config: RemoteFeedbackConfig, payload: any): Promise<FeedbackPushResult> {
+  if (!config.googleForm) return { ok: false, error: "Google Form config missing." };
+
+  const { submitUrl, entries } = config.googleForm;
+  const body = new URLSearchParams();
+
+  body.append(`entry.${entries.testerId}`, stringifyForForm(payload.tester_id));
+  body.append(`entry.${entries.issueType}`, stringifyForForm(payload.issue_type));
+  body.append(`entry.${entries.comment}`, stringifyForForm(payload.comment));
+  body.append(`entry.${entries.conversation}`, stringifyForForm(payload.conversation));
+  body.append(`entry.${entries.draft}`, stringifyForForm(payload.active_draft));
+  body.append(`entry.${entries.reminders}`, stringifyForForm(payload.visible_reminders_snapshot));
+  body.append(`entry.${entries.appVersion}`, stringifyForForm(payload.app_version));
+  body.append(`entry.${entries.buildLabel}`, stringifyForForm(payload.build_label));
+  body.append(`entry.${entries.platform}`, stringifyForForm(payload.platform));
+  body.append(`entry.${entries.userAgent}`, stringifyForForm(payload.user_agent));
+  body.append(`entry.${entries.createdAt}`, stringifyForForm(payload.created_at));
+
+  try {
+    await fetch(submitUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    return { ok: true };
+  } catch (error: any) {
+    return { ok: false, error: error?.message || "Google Form submission failed." };
+  }
+}
+
+async function pushToWebhook(config: RemoteFeedbackConfig, payload: any): Promise<FeedbackPushResult> {
+  if (!config.endpoint) return { ok: false, error: "Webhook endpoint missing." };
+  try {
+    const response = await fetch(config.endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) return { ok: false, error: `Webhook failed with HTTP ${response.status}` };
+    return { ok: true };
+  } catch (error: any) {
+    return { ok: false, error: error?.message || "Webhook submission failed." };
+  }
+}
+
+export async function pushFeedbackToRepository(
+  config: RemoteFeedbackConfig | null,
+  payload: any
+): Promise<FeedbackPushResult> {
+  if (!config) return { ok: false, error: "Feedback repository is not configured." };
+
+  if (config.provider === "google_form") return pushToGoogleForm(config, payload);
+  if (config.provider === "webhook" || config.provider === "google_sheets") return pushToWebhook(config, payload);
+
+  return {
+    ok: false,
+    error: `${config.provider} provider is not active in 3N.13.2. Use VITE_FEEDBACK_PROVIDER=google_form for no-billing UAT feedback.`,
+  };
+}
